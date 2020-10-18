@@ -7,6 +7,7 @@
    \------/(2, 1)\------/
           \------/
     NOTE mutability is implementation dependent, and should not be assumed.
+    Effectful function always return the updated object (mutable or not)
 *)
 type t
 

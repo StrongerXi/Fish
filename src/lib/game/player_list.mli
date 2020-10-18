@@ -18,9 +18,5 @@ val move_penguin : t -> Position.t -> Position.t -> int -> t
     Errors if the no the participating player has given color *)
 val place_penguin : t -> Player_color.t -> Position.t -> t
 
-(** Get positions of all penguins owned by player with given color
-    Errors if no participating player has given color *)
-val get_all_penguin_pos_of_player : t -> Player_color.t -> Position.t list
-
 (** Get states of all the players, ordered by how they take turns *)
 val get_ordered_players : t -> Player_state.t list

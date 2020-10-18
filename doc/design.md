@@ -9,13 +9,13 @@
   - A `current_player` is a natural number
 
 - A `game_state` is a `(board, player_list)`
-  - A `player_list` is a `(player_state list, position penguin map)`
-    - A `player_state` is a `(player_color, score)`
+  - A `player_list` is a `player_state list`
+    - A `player_state` is a `(player_color, score, penguin list)`
       - A `player_color` is basically an enum
       - A `score` is a natural number
-    - A `position` is a `(row, col)`, 2 integers
-    - A `penguin` is a `(player_color, int)`
+    - A `penguin` is a `(int, position)`
       - `int` represents the # of fish it's currently holding
+    - A `position` is a `(row, col)`, 2 integers
   - A `board` is a collection of `tile`
     - A `tile` has how many fish is on it
   
