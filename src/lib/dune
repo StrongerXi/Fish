@@ -1,0 +1,12 @@
+(library
+  (name fish)
+  ; these are the interface modules used to control accessibility
+  (modules_without_implementation fish util game gui
+  ; temporary
+  board board_config game_state player_list player_state tile
+  render
+  )
+)
+; treat subdirectories as if they are at the same level
+; selectively expose them in `fish.mli`
+(include_subdirs unqualified)
