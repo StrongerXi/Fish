@@ -1,8 +1,10 @@
-(** A [t] represents a tile on the fish game board 
+(** A [t] represents a tile on the fish game board , including:
+    - whether it's empty
+    - # of fish (positive, or 0 for empty tile)
     NOTE that it's immutable *)
 type t
 
-(** The empty tile. NOTE empty tile always has 0 fish *)
+(** The empty tile. *)
 val empty_tile : t
 
 (** Create a tile with given # of fish on it.

@@ -8,9 +8,9 @@ type t
     Errors if there exists any duplicates *)
 val create : Player_color.t list -> t
 
-(** Move the penguin at 1st position to the 2nd position, and update player
-    score based on # of fish the penguin is holding. The penguin will then
-    hold the given # of fish.
+(** Move the penguin at 1st position to the 2nd position. The integer represents
+    the # of fish on the tile at 1st position  Update player score based on this
+    # of fish.
     Errors if no penguin is at source position *)
 val move_penguin : t -> Position.t -> Position.t -> int -> t
 

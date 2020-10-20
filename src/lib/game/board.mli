@@ -15,6 +15,9 @@ type t
 (** Create a board with given configuration *)
 val create : Board_config.t -> t
 
+val get_width  : t -> int
+val get_height : t -> int
+
 (** Retrive the tile at given position.
     Errors if the position is out of bound *)
 val get_tile_at : t -> Position.t -> Tile.t

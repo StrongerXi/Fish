@@ -4,11 +4,25 @@ module PN = Fish.Game.Penguin
 module Pos = Fish.Util.Position
 
 let tests = OUnit2.(>:::) "player_state_tests" [
+
     OUnit2.(>::) "test_construction" (fun _ ->
         let p = P.create PC.Black in
         OUnit2.assert_equal PC.Black (P.get_player_color p);
         OUnit2.assert_equal 0 (P.get_score p);
         OUnit2.assert_equal [] (P.get_penguin_positions p);
+      );
+
+    OUnit2.(>::) "test_set_score" (fun _ ->
+        (* 1. only penguin positions are updated, correctly
+         * 2. no side effect *)
+        let p1 = P.create PC.Black in
+        let p2 = P.set_score p1 42 in
+        OUnit2.assert_equal PC.Black (P.get_player_color p1);
+        OUnit2.assert_equal 0 (P.get_score p1);
+        OUnit2.assert_equal [] (P.get_penguin_positions p1);
+        OUnit2.assert_equal PC.Black (P.get_player_color p2);
+        OUnit2.assert_equal 42 (P.get_score p2);
+        OUnit2.assert_equal [] (P.get_penguin_positions p2);
       );
 
     OUnit2.(>::) "test_add_penguin" (fun _ ->
@@ -27,18 +41,18 @@ let tests = OUnit2.(>:::) "player_state_tests" [
 
     OUnit2.(>::) "test_move_penguin" (fun _ ->
         (* 1. only penguin positions and score are updated, correctly
-         * 2. no side effect 
+         * 2. no side effect
          * 3. errors when no penguin is at 1st position *)
         let p1 = P.create PC.Red in
         let src = { Pos.row = 3; col = 5 } in
         let dst = { Pos.row = 3; col = 3 } in
-        let p2 = P.add_penguin p1 @@ PN.set_fish_held (PN.create src) 3 in
+        let p2 = P.add_penguin p1 @@ PN.create src in
         let p3 = P.move_penguin p2 src dst in
         OUnit2.assert_equal PC.Red (P.get_player_color p2);
         OUnit2.assert_equal 0 (P.get_score p2);
         OUnit2.assert_equal [src;] (P.get_penguin_positions p2);
         OUnit2.assert_equal PC.Red (P.get_player_color p3);
-        OUnit2.assert_equal 3 (P.get_score p3);
+        OUnit2.assert_equal 0 (P.get_score p3);
         OUnit2.assert_equal [dst;] (P.get_penguin_positions p3);
       );
 

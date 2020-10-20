@@ -8,6 +8,7 @@ type t
 
 (** Create a configuration with given [width] and [height] *)
 val create : height:int -> width:int -> t
+(* NOTE input config is passed at the end to allow chaining *)
 val set_width  : int -> t -> t
 val get_width  : t -> int
 val set_height : int -> t -> t
