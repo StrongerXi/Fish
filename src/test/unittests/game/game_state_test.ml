@@ -25,7 +25,8 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         OUnit2.assert_equal [PN.create pos11;] @@ PS.get_penguins p;
 
         (* penguin placement shouldn't affect the board *)
-        OUnit2.assert_equal (GS.get_board state0) (GS.get_board state1);
+        OUnit2.assert_equal 
+          (GS.get_board_copy state0) (GS.get_board_copy state1);
 
         (* place another one *)
         let pos02 = { Pos.row = 0; col = 2 } in
@@ -59,7 +60,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let state1 = GS.move_penguin state0 pos11 pos13 in
 
         (* Board should be updated after move *)
-        let board = GS.get_board state1 in
+        let board = GS.get_board_copy state1 in
         let tile11 = B.get_tile_at board pos11 in
         let tile13 = B.get_tile_at board pos13 in
         OUnit2.assert_equal true @@ T.is_empty tile11;

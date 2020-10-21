@@ -12,8 +12,8 @@ type t
 (** Create a game state with given board and participating players *)
 val create : Board.t -> Player_color.t list -> t
 
-(** NOTE mutating the returned board/player_list has no effect on [t] *)
-val get_board : t -> Board.t
+val get_board_copy : t -> Board.t
+
 val get_player_list : t -> Player_list.t
 
 (** Return a board after removing all tiles that have a penguin on it *)

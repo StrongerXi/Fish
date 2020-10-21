@@ -90,7 +90,7 @@ let render_board (board : BD.t) : unit =
 
 (** Resize the window based on game state *)
 let resize_window (gs : GS.t) : unit =
-  let board = GS.get_board gs in
+  let board = GS.get_board_copy gs in
   let height, width = BD.get_height board, BD.get_width board in
   let min_height = (1 + height) * Constants.tile_size in
   let min_width  = (1 + 4 * width) * Constants.tile_size in
@@ -115,8 +115,8 @@ let render =
      if not @@ !already_init
      then init ();
      resize_window gs;
-     render_board @@ GS.get_board gs;
-     let height = gs |> GS.get_board |> BD.get_height in
+     render_board @@ GS.get_board_copy gs;
+     let height = gs |> GS.get_board_copy |> BD.get_height in
      gs |> GS.get_player_list |> PL.get_ordered_players |> List.iter 
        (fun p -> render_player p height);
      Graphics.display_mode true;

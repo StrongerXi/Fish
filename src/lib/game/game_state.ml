@@ -4,7 +4,7 @@ type t =
   }
 
 let create board colors = { board; players = Player_list.create colors }
-let get_board t = t.board
+let get_board_copy t = Board.get_copy t.board
 let get_player_list t = t .players
 
 let get_board_minus_penguins t =
