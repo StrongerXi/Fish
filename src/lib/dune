@@ -3,7 +3,7 @@
   ; these are the interface modules used to control accessibility
   (modules_without_implementation fish util game gui serialize
   ; temporary
-  board board_config game_state player_list player_state tile
+  board board_config game_state player_list player_state
   render penguin game_tree action
   )
 )
