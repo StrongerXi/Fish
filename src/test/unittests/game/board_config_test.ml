@@ -32,14 +32,14 @@ let tests = OUnit2.(>:::) "board_config_tests" [
 
         let conf1 = Conf.set_min_num_of_one_fish_tile 7 conf in
         OUnit2.assert_equal 3 @@ Conf.get_width conf1;
-        OUnit2.assert_equal 8 @@ Conf.get_height conf1;
+        OUnit2.assert_equal 5 @@ Conf.get_height conf1;
         OUnit2.assert_equal [] @@ Conf.get_holes conf1;
         OUnit2.assert_equal 7 @@ Conf.get_min_num_of_one_fish_tile conf1;
         OUnit2.assert_equal 1 @@ Conf.get_default_num_of_fish conf1;
 
         let conf1 = Conf.set_default_num_of_fish 3 conf in
         OUnit2.assert_equal 3 @@ Conf.get_width conf1;
-        OUnit2.assert_equal 8 @@ Conf.get_height conf1;
+        OUnit2.assert_equal 5 @@ Conf.get_height conf1;
         OUnit2.assert_equal [] @@ Conf.get_holes conf1;
         OUnit2.assert_equal 0 @@ Conf.get_min_num_of_one_fish_tile conf1;
         OUnit2.assert_equal 3 @@ Conf.get_default_num_of_fish conf1;
@@ -52,7 +52,7 @@ let tests = OUnit2.(>:::) "board_config_tests" [
         in
         let conf1 = Conf.set_holes holes conf in
         OUnit2.assert_equal 3 @@ Conf.get_width conf1;
-        OUnit2.assert_equal 8 @@ Conf.get_height conf1;
+        OUnit2.assert_equal 5 @@ Conf.get_height conf1;
         OUnit2.assert_equal holes @@ Conf.get_holes conf1;
         OUnit2.assert_equal 0 @@ Conf.get_min_num_of_one_fish_tile conf1;
         OUnit2.assert_equal 1 @@ Conf.get_default_num_of_fish conf1;
