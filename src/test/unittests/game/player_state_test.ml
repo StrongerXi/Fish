@@ -14,7 +14,8 @@ let tests = OUnit2.(>:::) "player_state_tests" [
 
     OUnit2.(>::) "test_set_score" (fun _ ->
         (* 1. only penguin positions are updated, correctly
-         * 2. no side effect *)
+         * 2. no side effect
+         * 3. errors on bad input *)
         let p1 = P.create PC.Black in
         let p2 = P.set_score p1 42 in
         OUnit2.assert_equal PC.Black (P.get_player_color p1);
@@ -23,6 +24,8 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         OUnit2.assert_equal PC.Black (P.get_player_color p2);
         OUnit2.assert_equal 42 (P.get_score p2);
         OUnit2.assert_equal [] (P.get_penguin_positions p2);
+        let expect = Failure "score must be non-negative" in
+        OUnit2.assert_raises expect (fun () -> P.set_score p1 ~-1);
       );
 
     OUnit2.(>::) "test_add_penguin" (fun _ ->
@@ -54,6 +57,8 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         OUnit2.assert_equal PC.Red (P.get_player_color p3);
         OUnit2.assert_equal 0 (P.get_score p3);
         OUnit2.assert_equal [dst;] (P.get_penguin_positions p3);
+        let expect = Failure "no penguin is at move source" in
+        OUnit2.assert_raises expect (fun () -> P.move_penguin p3 src dst);
       );
 
     OUnit2.(>::) "test_penguin_order" (fun _ ->
@@ -68,11 +73,11 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p4 = P.add_penguin p3 @@ PN.create pos34 in
         OUnit2.assert_equal PC.White (P.get_player_color p4);
         OUnit2.assert_equal 0 (P.get_score p4);
-        OUnit2.assert_equal [pos11; pos23; pos34;] (P.get_penguin_positions p4);
-        let p5 = P.move_penguin p3 pos11 pos77 in
+        OUnit2.assert_equal [pos34; pos23; pos11;] (P.get_penguin_positions p4);
+        let p5 = P.move_penguin p4 pos11 pos77 in
         OUnit2.assert_equal PC.White (P.get_player_color p5);
         OUnit2.assert_equal 0 (P.get_score p5);
-        OUnit2.assert_equal [pos11; pos77; pos34;] (P.get_penguin_positions p5);
+        OUnit2.assert_equal [pos34; pos23; pos77;] (P.get_penguin_positions p5);
       );
   ]
 

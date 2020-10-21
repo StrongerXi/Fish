@@ -1,4 +1,4 @@
 (tests
-  (names tile_test penguin_test)
+  (names tile_test penguin_test player_state_test)
   (libraries ounit2 fish)
 )
