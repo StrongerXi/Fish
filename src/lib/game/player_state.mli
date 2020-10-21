@@ -14,8 +14,8 @@ val set_score : t -> int -> t
 val get_score : t -> int
 
 (** Move the penguin at 1st position to the 2nd position.
-    Errors if player has no penguin at 1st position *)
-val move_penguin : t -> Position.t -> Position.t -> t
+    Return None if player has no penguin at 1st position *)
+val move_penguin : t -> Position.t -> Position.t -> t option
 val add_penguin : t -> Penguin.t -> t
 
 (** Return positions of all penguins, reverse to the order they were added *)

@@ -18,13 +18,13 @@ let get_score t = t.score
 let move_penguin t src dst =
   let rec update_penguin pgs =
     match pgs with
-    | [] -> failwith "no penguin is at move source"
+    | [] -> None
     | p::pgs ->
       if src == Penguin.get_position p
-      then (Penguin.set_position p dst)::pgs
-      else p::(update_penguin pgs)
+      then Some ((Penguin.set_position p dst)::pgs)
+      else Option.map (List.cons p) (update_penguin pgs)
   in
-  { t with penguins = update_penguin t.penguins }
+  Option.map (fun penguins -> { t with penguins }) @@ update_penguin t.penguins
 
 let add_penguin t p = { t with penguins = p::t.penguins }
 

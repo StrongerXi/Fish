@@ -45,20 +45,19 @@ let tests = OUnit2.(>:::) "player_state_tests" [
     OUnit2.(>::) "test_move_penguin" (fun _ ->
         (* 1. only penguin positions and score are updated, correctly
          * 2. no side effect
-         * 3. errors when no penguin is at 1st position *)
+         * 3. return empty when no penguin is at 1st position *)
         let p1 = P.create PC.Red in
         let src = { Pos.row = 3; col = 5 } in
         let dst = { Pos.row = 3; col = 3 } in
         let p2 = P.add_penguin p1 @@ PN.create src in
-        let p3 = P.move_penguin p2 src dst in
+        let p3 = P.move_penguin p2 src dst |> Option.get in
         OUnit2.assert_equal PC.Red (P.get_player_color p2);
         OUnit2.assert_equal 0 (P.get_score p2);
         OUnit2.assert_equal [src;] (P.get_penguin_positions p2);
         OUnit2.assert_equal PC.Red (P.get_player_color p3);
         OUnit2.assert_equal 0 (P.get_score p3);
         OUnit2.assert_equal [dst;] (P.get_penguin_positions p3);
-        let expect = Failure "no penguin is at move source" in
-        OUnit2.assert_raises expect (fun () -> P.move_penguin p3 src dst);
+        OUnit2.assert_equal None @@ P.move_penguin p3 src dst;
       );
 
     OUnit2.(>::) "test_penguin_order" (fun _ ->
@@ -74,7 +73,7 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         OUnit2.assert_equal PC.White (P.get_player_color p4);
         OUnit2.assert_equal 0 (P.get_score p4);
         OUnit2.assert_equal [pos34; pos23; pos11;] (P.get_penguin_positions p4);
-        let p5 = P.move_penguin p4 pos11 pos77 in
+        let p5 = P.move_penguin p4 pos11 pos77 |> Option.get in
         OUnit2.assert_equal PC.White (P.get_player_color p5);
         OUnit2.assert_equal 0 (P.get_score p5);
         OUnit2.assert_equal [pos34; pos23; pos77;] (P.get_penguin_positions p5);
