@@ -74,7 +74,7 @@ let tests = OUnit2.(>:::) "board_tests" [
       );
 
     OUnit2.(>::) "test_get_copy" (fun _ ->
-        (* update copy has no effect on original *)
+        (* update original has no effect on copy *)
         let width, height = 3, 4 in
         let holes = [] in
         let min_one_fish_tile = 0 in
@@ -94,6 +94,46 @@ let tests = OUnit2.(>:::) "board_tests" [
             let tile = B.get_tile_at copy pos in
             OUnit2.assert_equal 3 @@ T.get_fish tile
           );
+      );
+
+    (* (0, 0)  (0, 1)  (----)  (----)  (0, 4)
+     *     (1, 0)  (1, 1)  (1, 2)  (1, 3)  (1, 4)
+     * (2, 0)  (2, 1)  (2, 2)  (2, 3)  (2, 4)
+     *     (3, 0)  (----)  (3, 2)  (3, 3)  (3, 4)
+     * (4, 0)  (4, 1)  (4, 2)  (4, 3)  (4, 4) *)
+    OUnit2.(>::) "test_get_reachable_from" (fun _ ->
+        let width, height = 3, 3 in
+        let holes = [] in
+        let min_one_fish_tile = 0 in
+        let dflt_fish = 3 in
+        let conf =
+          Conf.create ~height ~width
+          |> Conf.set_holes holes
+          |> Conf.set_min_num_of_one_fish_tile min_one_fish_tile
+          |> Conf.set_default_num_of_fish dflt_fish
+        in
+        let pos02 = { Pos.row = 0; col = 2 } in
+        let pos03 = { Pos.row = 0; col = 3 } in
+        let pos31 = { Pos.row = 3; col = 1 } in
+        let board = B.create conf in
+        let board = B.remove_tile_at board pos02 in
+        let board = B.remove_tile_at board pos03 in
+        let board = B.remove_tile_at board pos31 in
+        (* [dir * [pos]] *)
+        let result = B.get_reachable_from board { Pos.row = 2; col = 2 } in
+        let nn_pos = [] in
+        let ne_pos = [ { Pos.row = 1; col = 2 }; ] in
+        let nw_pos = [ { Pos.row = 1; col = 1 }; { Pos.row = 1; col = 0 };] in
+        let ss_pos = [ { Pos.row = 4; col = 2 };] in
+        let se_pos = [ { Pos.row = 3; col = 2 }; { Pos.row = 4; col = 3 };] in
+        let sw_pos = [] in
+        let open B.Direction in
+        OUnit2.assert_equal nn_pos @@ List.assoc North result;
+        OUnit2.assert_equal ne_pos @@ List.assoc Northeast result;
+        OUnit2.assert_equal nw_pos @@ List.assoc Northwest result;
+        OUnit2.assert_equal ss_pos @@ List.assoc South result;
+        OUnit2.assert_equal se_pos @@ List.assoc Southeast result;
+        OUnit2.assert_equal sw_pos @@ List.assoc Southwest result;
       );
   ]
 
