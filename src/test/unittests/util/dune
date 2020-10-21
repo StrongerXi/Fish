@@ -1,0 +1,4 @@
+(tests
+  (names position_test)
+  (libraries ounit2 fish)
+)

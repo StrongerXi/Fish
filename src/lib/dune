@@ -4,7 +4,7 @@
   (modules_without_implementation fish util game gui serialize
   ; temporary
   board board_config game_state player_list player_state tile
-  render penguin
+  render penguin game_tree action
   )
 )
 ; treat subdirectories as if they are at the same level
