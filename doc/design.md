@@ -18,6 +18,17 @@
   - A `board` is a collection of `tile`
     - A `tile` has how many fish is on it
   
+## Immutability
+Note that all data representations are immutable, __except for board__.
+The rationales include:
+
+1. Board dimension is likely the biggest performance bottleneck in the game
+   package.
+2. There is a scenario (`get_board_minus_penguins`) when we apply multiple
+   updates to the board in a single function call. Mutable board saves resources.
+3. Other data representations are either small enough, or they'll need to be
+   copied frequently (in AI game tree simulation), so they are made immutable.
+
 
 # High level control flow
 
