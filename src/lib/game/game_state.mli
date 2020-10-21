@@ -6,9 +6,7 @@
     It excludes:
       - whose turn it is
       - how to communicate with the actual players
-    NOTE mutability is implementation dependent, and should not be assumed.
-    Effectful function always return the updated object (mutable or not)
-*)
+    NOTE that it's immutable *)
 type t
 
 (** Create a game state with given board and participating players *)
@@ -27,6 +25,3 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
     score accordingly.
     Errors if either position is out of bound or source is empty *)
 val move_penguin : t -> Position.t -> Position.t -> t
-
-(** NOTE if [t] is immutable, this is just identity function *)
-val get_copy : t -> t
