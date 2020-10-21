@@ -1,4 +1,5 @@
 module Game_state = Game_state
+module Game_tree = Game_tree
 module Board = Board
 module Board_config = Board_config
 module Tile = Tile
