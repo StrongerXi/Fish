@@ -5,7 +5,7 @@
   ; temporary
   render game_tree action
   )
-  (libraries extlib)
+  (libraries graphics)
 )
 ; treat subdirectories as if they are at the same level
 ; selectively expose them in `fish.mli`

@@ -2,5 +2,5 @@
   (names
    tile_test penguin_test player_state_test player_list_test
    board_config_test board_test game_state_test)
-  (libraries ounit2 fish extlib)
+  (libraries ounit2 fish)
 )
