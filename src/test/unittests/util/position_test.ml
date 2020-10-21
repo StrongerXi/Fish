@@ -7,8 +7,8 @@ let tests = OUnit2.(>:::) "position_tests" [
         let p03 = { P.row = 0; col = 3 } in
         let p20 = { P.row = 2; col = 0 } in
         let p33 = { P.row = 3; col = 3 } in
-        OUnit2.assert_equal true @@ ((P.compare p11 p03) < 0);
-        OUnit2.assert_equal true @@ ((P.compare p11 p20) > 0);
+        OUnit2.assert_equal true @@ ((P.compare p03 p11) < 0);
+        OUnit2.assert_equal true @@ ((P.compare p20 p11) > 0);
         OUnit2.assert_equal true @@ ((P.compare p20 p33) < 0);
         OUnit2.assert_equal true @@ ((P.compare p33 p33) = 0);
       );
