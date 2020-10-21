@@ -45,6 +45,14 @@ let tests = OUnit2.(>:::) "board_tests" [
           (fun () -> B.create @@ Conf.set_width 0 conf);
         OUnit2.assert_raises expect 
           (fun () -> B.create @@ Conf.set_height 0 conf);
+
+        (* within board *)
+        OUnit.assert_equal true @@ B.within_board board { Pos.row = 3; col = 2 };
+        OUnit.assert_equal false @@ B.within_board board { Pos.row = 3; col = 3 };
+        OUnit.assert_equal false @@ B.within_board board { Pos.row = 4; col = 2 };
+        OUnit.assert_equal true @@ B.within_board board { Pos.row = 0; col = 0 };
+        OUnit.assert_equal false @@ B.within_board board { Pos.row = -1; col = 0 };
+        OUnit.assert_equal false @@ B.within_board board { Pos.row = 0; col = -1 };
       );
 
     OUnit2.(>::) "test_remove_tile_at" (fun _ ->

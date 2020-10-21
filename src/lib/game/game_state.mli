@@ -1,4 +1,4 @@
-(** A [t] represents a snapshot of the game state at a certain time. 
+(** A [t] represents a snapshot of the game state at a certain time.
     It includes:
       - the board state
       - state of all participating players

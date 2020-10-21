@@ -28,6 +28,9 @@ val create : Board_config.t -> t
 val get_width  : t -> int
 val get_height : t -> int
 
+(** Whether the given position is within the board, i.e., a valid position  *)
+val within_board : t -> Position.t -> bool
+
 (** Retrive the tile at given position.
     Errors if the position is out of bound *)
 val get_tile_at : t -> Position.t -> Tile.t

@@ -32,13 +32,13 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         let p = List.nth players 1 in
-        OUnit2.assert_equal [pos11; pos02;] @@ PS.get_penguin_positions p;
+        OUnit2.assert_equal [pos02; pos11] @@ PS.get_penguin_positions p;
 
         (* fails when input is bad *)
-        let expect = Failure "position is out of bound: (3, 3)" in
+        let expect = Failure "Position is outside the board" in
         OUnit2.assert_raises expect (fun () -> 
             GS.place_penguin state0 Color.Brown { Pos.row = 3; col = 3 });
-        let expect = Failure "no player of given color found: white" in
+        let expect = Failure "No player has given color" in
         OUnit2.assert_raises expect (fun () -> 
             GS.place_penguin state0 Color.White pos11);
       );
@@ -46,7 +46,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
     OUnit2.(>::) "test_move_penguin" (fun _ ->
         (* Score and board should be updated.
          * Make sure game state "wires the 2 components up" *)
-        let board = Conf.create ~width:3 ~height:3
+        let board = Conf.create ~width:5 ~height:5
                     |> Conf.set_default_num_of_fish 3
                     |> B.create
         in

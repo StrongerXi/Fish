@@ -53,7 +53,6 @@ let get_width t = Array.length t.tiles.(0)
 
 let get_height t = Array.length t.tiles
 
-(* Helper function *)
 let within_board t { Position.row; col } =
   let width, height = get_width t, get_height t in
   0 <= row && row < height && 0 <= col && col < width

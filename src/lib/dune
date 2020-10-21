@@ -3,7 +3,6 @@
   ; these are the interface modules used to control accessibility
   (modules_without_implementation fish util game gui serialize
   ; temporary
-  game_state
   render game_tree action
   )
   (libraries extlib)
