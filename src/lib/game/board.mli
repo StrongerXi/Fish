@@ -1,10 +1,10 @@
 (** A [t] represents the hexagon board in a fish game.
     The graphical interpretatio for positions (row, col) is as follows 
     ------        ------
-   /(0, 0)\------/(0, 2)\
-   \------/(0, 1)\------/
-   /(2, 0)\------/(2, 2)\
-   \------/(2, 1)\------/
+   /(0, 0)\------/(0, 1)\
+   \------/(1, 0)\------/
+   /(2, 0)\------/(2, 1)\
+   \------/(3, 0)\------/
           \------/
     NOTE mutability is implementation dependent, and should not be assumed.
     Effectful function always return the updated object (mutable or not)
@@ -21,7 +21,8 @@ module Direction : sig
     | Southwest
 end
 
-(** Create a board with given configuration *)
+(** Create a board with given configuration 
+    Error if any dimenson is non-positive. *)
 val create : Board_config.t -> t
 
 val get_width  : t -> int

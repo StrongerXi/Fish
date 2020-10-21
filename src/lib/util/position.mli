@@ -1,8 +1,8 @@
 (** A [t] represents a position on the fish game board. Check @see 'game/board'
     for how a position is interpreted. *)
 type t =
-  { col : int
-  ; row : int
+  { row : int
+  ; col : int
   }
 
 (** Creates a list of distinct positions (row, col) for

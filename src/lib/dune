@@ -3,9 +3,10 @@
   ; these are the interface modules used to control accessibility
   (modules_without_implementation fish util game gui serialize
   ; temporary
-  board game_state
+  game_state
   render game_tree action
   )
+  (libraries extlib)
 )
 ; treat subdirectories as if they are at the same level
 ; selectively expose them in `fish.mli`

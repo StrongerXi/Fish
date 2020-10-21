@@ -31,13 +31,20 @@ let tests = OUnit2.(>:::) "board_tests" [
                 let _ = OUnit2.assert_equal false (T.is_empty tile) in
                 let fish = T.get_fish tile in
                 let _ = OUnit2.assert_equal true
-                  (fish = dflt_fish || fish = min_one_fish_tile) in
+                  (fish = dflt_fish || fish = 1) in
                 fish)
         in
         let one_fish_tiles =
           List.filter (fun fish -> fish = 1) fishes |> List.length
         in
         OUnit2.assert_equal true (one_fish_tiles >= min_one_fish_tile);
+
+        (* non-positive dimension *)
+        let expect = Failure "Board dimension must be positive" in
+        OUnit2.assert_raises expect 
+          (fun () -> B.create @@ Conf.set_width 0 conf);
+        OUnit2.assert_raises expect 
+          (fun () -> B.create @@ Conf.set_height 0 conf);
       );
 
     OUnit2.(>::) "test_remove_tile_at" (fun _ ->
@@ -68,7 +75,7 @@ let tests = OUnit2.(>:::) "board_tests" [
           );
 
        let pos33 = { Pos.row = 3; col = 3 } in
-       let expect = Failure "position is out of bound: (3, 3)" in
+       let expect = Failure "position is outside the board" in
        OUnit2.assert_raises expect (fun _ -> B.get_tile_at board pos33);
        OUnit2.assert_raises expect (fun _ -> B.remove_tile_at board pos33);
       );
@@ -102,7 +109,7 @@ let tests = OUnit2.(>:::) "board_tests" [
      *     (3, 0)  (----)  (3, 2)  (3, 3)  (3, 4)
      * (4, 0)  (4, 1)  (4, 2)  (4, 3)  (4, 4) *)
     OUnit2.(>::) "test_get_reachable_from" (fun _ ->
-        let width, height = 3, 3 in
+        let width, height = 5, 5 in
         let holes = [] in
         let min_one_fish_tile = 0 in
         let dflt_fish = 3 in
@@ -123,7 +130,7 @@ let tests = OUnit2.(>:::) "board_tests" [
         let result = B.get_reachable_from board { Pos.row = 2; col = 2 } in
         let nn_pos = [] in
         let ne_pos = [ { Pos.row = 1; col = 2 }; ] in
-        let nw_pos = [ { Pos.row = 1; col = 1 }; { Pos.row = 1; col = 0 };] in
+        let nw_pos = [ { Pos.row = 1; col = 1 }; { Pos.row = 0; col = 1 };] in
         let ss_pos = [ { Pos.row = 4; col = 2 };] in
         let se_pos = [ { Pos.row = 3; col = 2 }; { Pos.row = 4; col = 3 };] in
         let sw_pos = [] in

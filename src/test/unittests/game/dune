@@ -1,6 +1,6 @@
 (tests
-  (names 
+  (names
    tile_test penguin_test player_state_test player_list_test
-   board_config_test)
-  (libraries ounit2 fish)
+   board_config_test board_test)
+  (libraries ounit2 fish extlib)
 )

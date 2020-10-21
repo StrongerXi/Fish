@@ -1,6 +1,6 @@
 type t =
-  { col : int
-  ; row : int
+  { row : int
+  ; col : int
   }
 
 let create_positions_within ~height ~width =
