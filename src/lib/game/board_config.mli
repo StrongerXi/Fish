@@ -16,6 +16,6 @@ val get_height : t -> int
 val set_holes  : Position.t list -> t -> t
 val get_holes  : t -> Position.t list
 val set_min_num_of_one_fish_tile : int -> t -> t
-val get_min_num_of_one_fish_tile : int -> t
+val get_min_num_of_one_fish_tile : t -> int
 val set_default_num_of_fish : int -> t -> t
 val get_default_num_of_fish : t -> int

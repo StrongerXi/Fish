@@ -16,6 +16,9 @@ val create : Board.t -> Player_color.t list -> t
 val get_board : t -> Board.t
 val get_player_list : t -> Player_list.t
 
+(** Return a board after removing all tiles that have a penguin on it *)
+val get_board_minus_penguins : t -> Board.t
+
 (** Place a new penguin with given color at given position on the board.
     Errors if the no the participating player has given color, or if
     position is out of bound *)
