@@ -18,5 +18,5 @@ val get_score : t -> int
 val move_penguin : t -> Position.t -> Position.t -> t option
 val add_penguin : t -> Penguin.t -> t
 
-(** Return positions of all penguins, reverse to the order they were added *)
-val get_penguin_positions : t -> Position.t list
+(** Return all penguins owned by [t], reverse to the order they were added *)
+val get_penguins : t -> Penguin.t list

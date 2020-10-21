@@ -5,6 +5,7 @@ module Color = Fish.Game.Player_color
 module Pos = Fish.Util.Position
 module PL = Fish.Game.Player_list
 module PS = Fish.Game.Player_state
+module PN = Fish.Game.Penguin
 module T = Fish.Game.Tile
 
 let tests = OUnit2.(>:::) "game_state_tests" [
@@ -21,7 +22,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         let p = List.nth players 1 in
-        OUnit2.assert_equal [pos11;] @@ PS.get_penguin_positions p;
+        OUnit2.assert_equal [PN.create pos11;] @@ PS.get_penguins p;
 
         (* penguin placement shouldn't affect the board *)
         OUnit2.assert_equal (GS.get_board state0) (GS.get_board state1);
@@ -32,7 +33,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         let p = List.nth players 1 in
-        OUnit2.assert_equal [pos02; pos11] @@ PS.get_penguin_positions p;
+        OUnit2.assert_equal [PN.create pos02; PN.create pos11] @@ PS.get_penguins p;
 
         (* fails when input is bad *)
         let expect = Failure "Position is outside the board" in

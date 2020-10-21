@@ -11,7 +11,8 @@ let get_board_minus_penguins t =
   let board = ref @@ Board.get_copy t.board in
   Player_list.get_ordered_players t.players |> List.iter
     (fun p -> 
-       Player_state.get_penguin_positions p |> List.iter
+       Player_state.get_penguins p 
+       |> List.map Penguin.get_position |> List.iter
          (fun pos -> board := Board.remove_tile_at !board pos));
   !board
 

@@ -9,7 +9,7 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p = P.create PC.Black in
         OUnit2.assert_equal PC.Black (P.get_player_color p);
         OUnit2.assert_equal 0 (P.get_score p);
-        OUnit2.assert_equal [] (P.get_penguin_positions p);
+        OUnit2.assert_equal [] (P.get_penguins p);
       );
 
     OUnit2.(>::) "test_set_score" (fun _ ->
@@ -20,10 +20,10 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p2 = P.set_score p1 42 in
         OUnit2.assert_equal PC.Black (P.get_player_color p1);
         OUnit2.assert_equal 0 (P.get_score p1);
-        OUnit2.assert_equal [] (P.get_penguin_positions p1);
+        OUnit2.assert_equal [] (P.get_penguins p1);
         OUnit2.assert_equal PC.Black (P.get_player_color p2);
         OUnit2.assert_equal 42 (P.get_score p2);
-        OUnit2.assert_equal [] (P.get_penguin_positions p2);
+        OUnit2.assert_equal [] (P.get_penguins p2);
         let expect = Failure "score must be non-negative" in
         OUnit2.assert_raises expect (fun () -> P.set_score p1 ~-1);
       );
@@ -36,10 +36,10 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p2 = P.add_penguin p1 @@ PN.create pos in
         OUnit2.assert_equal PC.Black (P.get_player_color p1);
         OUnit2.assert_equal 0 (P.get_score p1);
-        OUnit2.assert_equal [] (P.get_penguin_positions p1);
+        OUnit2.assert_equal [] (P.get_penguins p1);
         OUnit2.assert_equal PC.Black (P.get_player_color p2);
         OUnit2.assert_equal 0 (P.get_score p2);
-        OUnit2.assert_equal [pos;] (P.get_penguin_positions p2);
+        OUnit2.assert_equal [PN.create pos;] (P.get_penguins p2);
       );
 
     OUnit2.(>::) "test_move_penguin" (fun _ ->
@@ -53,10 +53,10 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p3 = P.move_penguin p2 src dst |> Option.get in
         OUnit2.assert_equal PC.Red (P.get_player_color p2);
         OUnit2.assert_equal 0 (P.get_score p2);
-        OUnit2.assert_equal [src;] (P.get_penguin_positions p2);
+        OUnit2.assert_equal [PN.create src;] (P.get_penguins p2);
         OUnit2.assert_equal PC.Red (P.get_player_color p3);
         OUnit2.assert_equal 0 (P.get_score p3);
-        OUnit2.assert_equal [dst;] (P.get_penguin_positions p3);
+        OUnit2.assert_equal [PN.create dst;] (P.get_penguins p3);
         OUnit2.assert_equal None @@ P.move_penguin p3 src dst;
       );
 
@@ -72,11 +72,15 @@ let tests = OUnit2.(>:::) "player_state_tests" [
         let p4 = P.add_penguin p3 @@ PN.create pos34 in
         OUnit2.assert_equal PC.White (P.get_player_color p4);
         OUnit2.assert_equal 0 (P.get_score p4);
-        OUnit2.assert_equal [pos34; pos23; pos11;] (P.get_penguin_positions p4);
+        OUnit2.assert_equal 
+          (List.map PN.create [pos34; pos23; pos11;])
+          (P.get_penguins p4);
         let p5 = P.move_penguin p4 pos11 pos77 |> Option.get in
         OUnit2.assert_equal PC.White (P.get_player_color p5);
         OUnit2.assert_equal 0 (P.get_score p5);
-        OUnit2.assert_equal [pos34; pos23; pos77;] (P.get_penguin_positions p5);
+        OUnit2.assert_equal 
+          (List.map PN.create [pos34; pos23; pos77;])
+          (P.get_penguins p5);
       );
   ]
 

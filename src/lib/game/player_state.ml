@@ -28,5 +28,4 @@ let move_penguin t src dst =
 
 let add_penguin t p = { t with penguins = p::t.penguins }
 
-(** Return positions of all penguins, in the order they were added *)
-let get_penguin_positions t = List.map Penguin.get_position t.penguins
+let get_penguins t = t.penguins
