@@ -1,9 +1,8 @@
 (library
   (name fish)
   ; these are the interface modules used to control accessibility
-  (modules_without_implementation fish util game gui serialize
-  ; temporary
-  game_tree action
+  (modules_without_implementation 
+   fish util game gui serialize
   )
   (libraries graphics extlib yojson core)
   (preprocess (pps ppx_let))
