@@ -28,3 +28,6 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
     score accordingly.
     Errors if either position is out of bound or source is empty *)
 val move_penguin : t -> Position.t -> Position.t -> t
+
+(** Discouraged unless you have good reason and know what you are doing *)
+val from_board_playerlist : Board.t -> Player_list.t -> t

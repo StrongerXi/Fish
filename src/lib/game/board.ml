@@ -1,3 +1,4 @@
+open !Core
 module C = Board_config
 
 type t =
@@ -16,7 +17,7 @@ module Direction = struct
   (** The amount of offset in row and column to take 1 step in [dir],
       starting from any position on [row] *)
   let get_row_col_offset dir row =
-    let even_row = row mod 2 == 0 in
+    let even_row = row mod 2 = 0 in
     match dir with
     | North     -> (~-2, 0)
     | South     -> (  2, 0)
@@ -37,11 +38,11 @@ let create config =
   let dft_fish = C.get_default_num_of_fish config in
   let one_fish_tile = ref @@ C.get_min_num_of_one_fish_tile config in
 
-  let tiles = Array.make_matrix height width @@ Tile.create dft_fish in
+  let tiles = Array.make_matrix ~dimy:width ~dimx:height @@ Tile.create dft_fish in
   holes |> List.iter
-    (fun {Position.row; col} -> tiles.(row).(col) <- Tile.empty_tile);
+    ~f:(fun {Position.row; col} -> tiles.(row).(col) <- Tile.empty_tile);
   Position.create_positions_within ~height ~width |> List.iter
-    (fun {Position.row; col} ->
+    ~f:(fun {Position.row; col} ->
        if (not @@ Tile.is_empty tiles.(row).(col)) &&
           !one_fish_tile > 0
        then
@@ -84,7 +85,17 @@ let get_reachable_from t src =
   then []
   else
     Direction.values |> List.map
-      (fun dir ->
-         (dir, List.tl @@ add_until_cant src.row src.col dir []))
+      ~f:(fun dir -> (dir, List.tl_exn @@ add_until_cant src.row src.col dir []))
 
-let get_copy t = { tiles = Array.map Array.copy t.tiles }
+let get_copy t = { tiles = Array.map ~f:Array.copy t.tiles }
+
+let from_tiles tiles =
+  let height = List.length tiles in
+  match List.map ~f:List.length tiles |> List.max_elt ~compare:Int.compare with
+  | None -> failwith "0 width means empty board"
+  | Some(width) ->
+    let arr = Array.make_matrix ~dimy:height ~dimx:width Tile.empty_tile in
+    List.iteri tiles ~f:(fun row tiles ->
+        List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
+    { tiles = arr }
+

@@ -5,8 +5,10 @@
   ; temporary
   game_tree action
   )
-  (libraries graphics extlib)
+  (libraries graphics extlib yojson core)
+  (preprocess (pps ppx_let))
 )
+
 ; treat subdirectories as if they are at the same level
 ; selectively expose them in `fish.mli`
 (include_subdirs unqualified)

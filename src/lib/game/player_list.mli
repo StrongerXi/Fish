@@ -20,3 +20,6 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
 
 (** Get states of all the players, ordered by how they take turns *)
 val get_ordered_players : t -> Player_state.t list
+
+(** Discouraged unless you have good reason and know what you are doing *)
+val from_players : Player_state.t list -> t

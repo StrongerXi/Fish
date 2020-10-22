@@ -3,3 +3,4 @@
 module Util = Util
 module Game = Game
 module Gui = Gui
+module Serialize = Serialize

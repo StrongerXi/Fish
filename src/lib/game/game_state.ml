@@ -26,3 +26,5 @@ let move_penguin t src dst =
   let players = Player_list.move_penguin t.players src dst fish in
   let board = Board.remove_tile_at (Board.get_copy t.board) src in
   { board; players }
+
+let from_board_playerlist board players = { board; players }

@@ -30,3 +30,5 @@ let place_penguin t color pos =
   { players = update_players t.players }
 
 let get_ordered_players t = t.players
+
+let from_players players = { players }
