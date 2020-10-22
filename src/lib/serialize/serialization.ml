@@ -82,7 +82,8 @@ let from_player (player : Player_state.t) : t =
   let color_t = from_color @@ Player_state.get_player_color player
   and score_t = `Int(Player_state.get_score player)
   and pengs_t = `List(List.map ~f:from_penguin @@ Player_state.get_penguins player)
-  in `Assoc([("color", color_t); ("score", score_t); ("places", pengs_t);])
+  in
+  `Assoc([("color", color_t); ("score", score_t); ("places", pengs_t);])
 
 let to_player (t : t) : Player_state.t option =
   let open Option.Let_syntax in
@@ -100,7 +101,9 @@ let to_player (t : t) : Player_state.t option =
         color = to_color color_t in
         let player = Player_state.create color in
         let player = Player_state.set_score player score in
-        let player = List.fold_left ~init:player ~f:Player_state.add_penguin pengs in
+        let player = 
+          List.fold_right ~init:player 
+            ~f:(Fun.flip Player_state.add_penguin) pengs in
         Some(player)
       | _ -> None
     end

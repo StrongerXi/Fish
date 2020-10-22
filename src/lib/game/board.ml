@@ -14,17 +14,17 @@ module Direction = struct
     | Northwest
     | Southwest
 
-  (** The amount of offset in row and column to take 1 step in [dir],
-      starting from any position on [row] *)
-  let get_row_col_offset dir row =
+  (** Return the position of the adjust tile to ([row], [col])
+      in direction [dir] *)
+  let step_in_dir (row : int) (col : int) (dir : t) : (int * int) =
     let even_row = row mod 2 = 0 in
     match dir with
-    | North     -> (~-2, 0)
-    | South     -> (  2, 0)
-    | Northeast -> (~-1, if even_row then 0 else   1)
-    | Southeast -> (  1, if even_row then 0 else   1)
-    | Northwest -> (~-1, if even_row then ~-1 else 0)
-    | Southwest -> (  1, if even_row then ~-1 else 0)
+    | North     -> (row - 2, col)
+    | South     -> (row + 2, col)
+    | Northeast -> (row - 1, col + if even_row then 0 else   1)
+    | Southeast -> (row + 1, col + if even_row then 0 else   1)
+    | Northwest -> (row - 1, col + if even_row then ~-1 else 0)
+    | Southwest -> (row + 1, col + if even_row then ~-1 else 0)
 
   let values = [North; South; Northeast; Southeast; Northwest; Southwest]
 end
@@ -77,15 +77,17 @@ let get_reachable_from t src =
     if within_board t pos &&
        not @@ Tile.is_empty @@ (get_tile_at t pos)
     then
-      let dr, dc = Direction.get_row_col_offset dir row in
-      add_until_cant (row + dr) (col + dc) dir (pos::acc)
+      let row, col = Direction.step_in_dir row col dir in
+      add_until_cant row col dir (pos::acc)
     else List.rev acc
   in
   if not @@ within_board t src
   then []
   else
     Direction.values |> List.map
-      ~f:(fun dir -> (dir, List.tl_exn @@ add_until_cant src.row src.col dir []))
+      ~f:(fun dir -> 
+          let row, col = Direction.step_in_dir src.row src.col dir in
+          (dir, add_until_cant row col dir []))
 
 let get_copy t = { tiles = Array.map ~f:Array.copy t.tiles }
 
@@ -94,7 +96,7 @@ let from_tiles tiles =
   match List.map ~f:List.length tiles |> List.max_elt ~compare:Int.compare with
   | None -> failwith "0 width means empty board"
   | Some(width) ->
-    let arr = Array.make_matrix ~dimy:height ~dimx:width Tile.empty_tile in
+    let arr = Array.make_matrix ~dimx:height ~dimy:width Tile.empty_tile in
     List.iteri tiles ~f:(fun row tiles ->
         List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
     { tiles = arr }
