@@ -4,3 +4,6 @@ type t =
   | Brown
   | Black
   | White
+[@@deriving compare]
+
+let compare = [%compare: t]

@@ -1,7 +1,7 @@
 (** A [t] represents a snapshot of the game state at a certain time.
     It includes:
       - the board state
-      - state of all participating players
+      - state of all participating players (with unique colors)
       - the order in which players take turn
     It excludes:
       - whose turn it is
@@ -9,7 +9,8 @@
     NOTE that it's immutable *)
 type t
 
-(** Create a game state with given board and participating players *)
+(** Create a game state with given board and participating players 
+    Errors if there are duplicates in the colors *)
 val create : Board.t -> Player_color.t list -> t
 
 val get_board_copy : t -> Board.t

@@ -5,7 +5,7 @@
    fish util game gui serialize
   )
   (libraries graphics extlib yojson core)
-  (preprocess (pps ppx_let))
+  (preprocess (pps ppx_let ppx_compare))
 )
 
 ; treat subdirectories as if they are at the same level

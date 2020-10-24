@@ -1,19 +1,25 @@
+open !Core
+
 type t =
   { board : Board.t
   ; players : Player_list.t
   }
 
-let create board colors = { board; players = Player_list.create colors }
+let create board colors = 
+  if List.contains_dup ~compare:Player_color.compare colors
+  then failwith "colors in a fish game must be unique"
+  else { board; players = Player_list.create colors }
+
 let get_board_copy t = Board.get_copy t.board
 let get_player_list t = t .players
 
 let get_board_minus_penguins t =
   let board = ref @@ Board.get_copy t.board in
   Player_list.get_ordered_players t.players |> List.iter
-    (fun p -> 
+    ~f:(fun p -> 
        Player_state.get_penguins p 
-       |> List.map Penguin.get_position |> List.iter
-         (fun pos -> board := Board.remove_tile_at !board pos));
+       |> List.map ~f:Penguin.get_position |> List.iter
+         ~f:(fun pos -> board := Board.remove_tile_at !board pos));
   !board
 
 let place_penguin t color pos =
