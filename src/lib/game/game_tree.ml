@@ -1,102 +1,99 @@
-(** A helper module to manage turns of player in a Fish game *)
-module Player_Order = struct
-  (* Essentially a 2 list based circular queue *)
-  type t = 
-    { nexts : Player_color.t list
-    ; current : Player_color.t
-    ; prevs : Player_color.t list
-    }
+open !Core
 
-  (** Create a player order based on [players], i.e. the first color in [players]
-      is will be the current player in the resulting order *)
-  let create (players : Player_color.t list) =
-    match players with
-    | [] -> failwith "Players must be non-empty"
-    | p::ps -> { nexts = ps; current = p; prevs = [] }
-  ;;
-
-  let get_current (t : t) = t.current
-  ;;
-
-  (** Return a new order where the next player becomes the current player *)
-  let rotate ({ nexts; current; prevs } : t) =
-    match nexts with
-    | [] -> create @@ List.rev (current::prevs)
-    | n::ns -> { nexts = ns; current = n; prevs = current::prevs }
-  ;;
-end
-
+module GS = Game_state
+module PL = Player_list
+module PS = Player_state
+module Order = Util.Order
 
 type t =
-  { state : Game_state.t
-  ; order : Player_Order.t
+  { state : GS.t
+  ; order : Player_color.t Order.t
+  ; subtrees : (Action.t * t) list option ref
   }
 
-let create state start = 
-  let players = state 
-                |> Game_state.get_player_list |> Player_list.get_ordered_players
-                |> List.map Player_state.get_player_color 
+let create state start_color = 
+  let colors = state 
+               |> GS.get_player_list |> PL.get_ordered_players
+               |> List.map ~f:PS.get_player_color 
   in
-  (** Find [start] in [players], and then create a [Player_Order.t].
-      [prevs] contains the already checked players in reversed order.
-      Return [None] if [start] is not found in [players]. *)
-  let rec partition players prevs : Player_Order.t option =
-    match players with
-    | p::players ->
-      if p = start
-      then Some(Player_Order.create @@ start::players @ (List.rev prevs))
-      else partition players (p::prevs)
-    | [] -> None
-  in
-  match partition players [] with
+  match Order.create_with_start colors start_color with
   | None -> failwith "Starting player is not in the state"
-  | Some(order) -> { state; order }
+  | Some(order) -> { state; order; subtrees = ref None }
 ;;
 
 let get_state t = t.state
 ;;
 
-let get_current_player t = Player_Order.get_current t.order
+let get_current_player t = Order.get_current t.order
 ;;
 
-let get_next_nodes t =
-  let board = Game_state.get_board_minus_penguins t.state
-  and players = 
-    t.state |> Game_state.get_player_list |> Player_list.get_ordered_players
-  and current = get_current_player t
-  in
-  (* Return all legal action that can be taken starting from [src] on [board] *)
-  let get_legal_actions_from (src : Position.t) : Action.t list =
+(** A helper function that computes all legal moves for [t]'s current player,
+    and associates them with the resulting game tree. *)
+let compute_subtrees_with_moves t : (Action.t * t) list =
+  let board = GS.get_board_minus_penguins t.state
+  and players = t.state |> GS.get_player_list |> PL.get_ordered_players
+  and current = Order.get_current t.order
+  and next_order = Order.rotate t.order in
+  (* Return all legal positions a penguin can move to from [src] on [board] *)
+  let get_legal_move_dsts_from (src : Position.t) : Position.t list =
     Board.get_reachable_from board src
-    |> List.map (fun (_, dsts) -> dsts) |> List.flatten
-    |> List.map (fun dst -> Action.Move(src, dst))
+    |> List.map ~f:(fun (_, dsts) -> dsts) |> List.concat
   in
-  let next_order = Player_Order.rotate t.order in
-  (* [create] guarantees current player is in the player list *)
-  List.find (fun p -> current = Player_state.get_player_color p) players
-  |> Player_state.get_penguins 
-  |> List.map Penguin.get_position
-  |> List.map get_legal_actions_from
-  |> List.flatten
-  |> List.map 
-    (fun (Action.Move(src, dst) as act) -> 
-       let next_state = Game_state.move_penguin t.state src dst in
-       (act, { state = next_state; order = next_order }))
+  let open List.Let_syntax in
+  let%bind src = 
+    (* [create] guarantees current player is in the player list *)
+    List.find_exn players
+      ~f:(fun p -> Core.phys_equal current (PS.get_player_color p)) 
+    |> PS.get_penguins |> List.map ~f:Penguin.get_position
+  in
+  let%bind dst = get_legal_move_dsts_from src in
+  let next_state = GS.move_penguin t.state src dst in
+  let act = Action.Move(src, dst) in
+  return (act, { state = next_state; order = next_order; subtrees = ref None })
 ;;
 
-let skip_to_moveable_tree t =
-  let start = get_current_player t in
+let rec get_subtrees t =
+  match !(t.subtrees) with
+  | Some(subtrees) -> subtrees
+  | None -> generate_until_moveable_subtree t
+(** Skip players without legal moves, until we reach a player that can move.
+    If no player can move, return empty list.
+    Else the first tree in the returned list is the one whose current player can
+    make a move (i.e., [get_next_nodes] will return non-empty result). The other
+    trees in the list are the ones skipped, in reveresed order. *)
+and skip_to_moveable_tree t : t list =
+  let start_color = get_current_player t in
   (** [t]   is the current tree to be examined, [t = start] only for init call.
       [acc] is the previously skipped trees in reversed order. *)
   let rec skip_to_moveable_tree_until_start t acc : t list =
-    match get_next_nodes t with
+    match compute_subtrees_with_moves t with
     | _::_ -> t::acc
     | [] -> 
-      let next_t = { t with order = Player_Order.rotate t.order } in
-      let next_player = get_current_player next_t in
-      if next_player = start
+      let next_t = { t with order = Order.rotate t.order } in
+      let next_color = get_current_player next_t in
+      if Core.phys_same next_color start_color
       then [] (* no player was able to move *)
       else skip_to_moveable_tree_until_start next_t (t::acc)
   in 
   skip_to_moveable_tree_until_start t []
+(** In general, the subtrees of [t] has the form:
+      t --skip--> t1 --skip--> ... --skip-->tk --moves-> ...
+    or it has no subtrees if no player can move.
+    [generate_until_moveable_subtree] compute and stitch together all the
+    skipped subtrees until one that has legal moves. 
+    EFFECT: Update the [subtrees] field for [t] all the way to [tk].
+    Note that if [t] == [tk], there is no skipping at all *)
+and generate_until_moveable_subtree t : (Action.t * t) list = 
+  let () =
+    match skip_to_moveable_tree t with
+    | [] -> t.subtrees := Some([]);
+    | moveable::ts ->
+      Core.ignore @@
+      List.fold_left ts (* Stitch the skipped subtrees together *)
+        ~f:(fun subtree t -> t.subtrees := Some([(Action.Skip, subtree);]); t)
+        ~init:moveable
+  in
+  match !(t.subtrees) with
+  | None -> failwith "subtrees of t must have been initialized"
+  | Some(subtrees) -> subtrees
 ;;

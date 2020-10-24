@@ -13,13 +13,6 @@ val get_state : t -> Game_state.t
 val get_current_player : t -> Player_color.t
 
 (** Return a list that associates each of the legal action from current player
-    to the resulting state from that action. *)
-val get_next_nodes : t -> (Action.t * t) list
-
-(** Skip players who can't make any legal move, until we reach a player that can
-    move. 
-    If no player can move, return empty list.
-    Else the first tree in the returned list is the one whose current player can
-    make a move (i.e., [get_next_nodes] will return non-empty result). The first
-    trees in the list are the ones skipped, in reveresed order. *)
-val skip_to_moveable_tree : t -> t list
+    to the resulting state from that action. An empty list means this is a leaf
+    node. *)
+val get_subtrees : t -> (Action.t * t) list
