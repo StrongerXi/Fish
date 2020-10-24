@@ -56,11 +56,9 @@ let rec get_subtrees t =
   match !(t.subtrees) with
   | Some(subtrees) -> subtrees
   | None -> generate_until_moveable_subtree t
-(** Skip players without legal moves, until we reach a player that can move.
-    If no player can move, return empty list.
-    Else the first tree in the returned list is the one whose current player can
-    make a move (i.e., [get_next_nodes] will return non-empty result). The other
-    trees in the list are the ones skipped, in reveresed order. *)
+(** Skip subtrees without legal moves, until we reach a player that can move.
+    The returned list has the form [[moveable; last-skipped; ...; t]]
+    Return empty list if no player can move. *)
 and skip_to_moveable_tree t : t list =
   let start_color = get_current_player t in
   (** [t]   is the current tree to be examined, [t = start] only for init call.
@@ -68,7 +66,7 @@ and skip_to_moveable_tree t : t list =
   let rec skip_to_moveable_tree_until_start t acc : t list =
     match compute_subtrees_with_moves t with
     | _::_ -> t::acc
-    | [] -> 
+    | [] -> (* current player in [t] can't move, skip it *)
       let next_t = { t with order = Order.rotate t.order } in
       let next_color = get_current_player next_t in
       if Core.phys_same next_color start_color
@@ -77,22 +75,18 @@ and skip_to_moveable_tree t : t list =
   in 
   skip_to_moveable_tree_until_start t []
 (** In general, the subtrees of [t] has the form:
-      t --skip--> t1 --skip--> ... --skip-->tk --moves-> ...
+      t --skip--> t1 --skip--> ... --skip--> tk --moves--> ...
     or it has no subtrees if no player can move.
-    [generate_until_moveable_subtree] compute and stitch together all the
-    skipped subtrees until one that has legal moves. 
-    EFFECT: Update the [subtrees] field for [t] all the way to [tk].
-    Note that if [t] == [tk], there is no skipping at all *)
+    EFFECT: Update the [subtrees] field from [t] to [tk] to "stitch them up"
+    Return [!t.subtrees], which is emptty if no moveable subtree exists *)
 and generate_until_moveable_subtree t : (Action.t * t) list = 
-  let () =
-    match skip_to_moveable_tree t with
-    | [] -> t.subtrees := Some([]);
-    | moveable::ts ->
-      Core.ignore @@
-      List.fold_left ts (* Stitch the skipped subtrees together *)
-        ~f:(fun subtree t -> t.subtrees := Some([(Action.Skip, subtree);]); t)
-        ~init:moveable
-  in
+  (match skip_to_moveable_tree t with
+   | [] -> t.subtrees := Some([]);
+   | moveable::ts ->
+     Core.ignore @@
+     List.fold_left ts (* Stitch the skipped subtrees together *)
+       ~f:(fun subtree t -> t.subtrees := Some([(Action.Skip, subtree);]); t)
+       ~init:moveable);
   match !(t.subtrees) with
   | None -> failwith "subtrees of t must have been initialized"
   | Some(subtrees) -> subtrees
