@@ -11,7 +11,7 @@ module Constants = struct
   let window_title = "Fish!"
   let fish_color          = Graphics.black
   let tile_boundary_color = Graphics.black
-  let empty_tile_color    = Graphics.rgb 200 200 200
+  let hole_tile_color    = Graphics.rgb 200 200 200
   let occupied_tile_color = Graphics.rgb 255 165 0
 end
 (* -------------------------------------------------------------- *)
@@ -45,8 +45,8 @@ let render_tile (tile : Tile.t) ({ Pos.row; col } : Pos.t) (height : int) : unit
   in
   Graphics.set_color tile_boundary_color;
   Graphics.draw_poly vertices;
-  if Tile.is_empty tile
-  then Graphics.set_color empty_tile_color
+  if Tile.is_hole tile
+  then Graphics.set_color hole_tile_color
   else Graphics.set_color occupied_tile_color;
   Graphics.fill_poly vertices;
   (* draw fish *)

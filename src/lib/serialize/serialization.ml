@@ -28,7 +28,7 @@ let from_tile (tile : Tile.t) : t = `Int(Tile.get_fish tile)
 
 let to_tile (t : t) : Tile.t option =
   match t with
-  | `Int(n) -> Some(if n = 0 then Tile.empty_tile else Tile.create n)
+  | `Int(n) -> Some(if n = 0 then Tile.hole else Tile.create n)
   | _ -> None
 ;;
 

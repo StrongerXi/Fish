@@ -1,9 +1,7 @@
-type t =
-  { pos : Position.t
-  }
+type t = Position.t
 
-let create pos = { pos }
+let create pos = pos
 
-let set_position _ pos = { pos }
+let set_position _ pos = pos
 
-let get_position p = p.pos
+let get_position p = p

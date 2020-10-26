@@ -25,10 +25,10 @@ let tests = OUnit2.(>:::) "board_tests" [
               let tile = B.get_tile_at board pos in
               if List.mem pos holes
               then
-                let _ = OUnit2.assert_equal true (T.is_empty tile) in
+                let _ = OUnit2.assert_equal true (T.is_hole tile) in
                 0
               else
-                let _ = OUnit2.assert_equal false (T.is_empty tile) in
+                let _ = OUnit2.assert_equal false (T.is_hole tile) in
                 let fish = T.get_fish tile in
                 let _ = OUnit2.assert_equal true
                   (fish = dflt_fish || fish = 1) in
@@ -78,12 +78,12 @@ let tests = OUnit2.(>:::) "board_tests" [
         |> List.iter (fun pos ->
             let tile = B.get_tile_at board pos in
             if pos = pos11
-            then OUnit2.assert_equal true @@ T.is_empty tile
-            else OUnit2.assert_equal false @@ T.is_empty tile
+            then OUnit2.assert_equal true @@ T.is_hole tile
+            else OUnit2.assert_equal false @@ T.is_hole tile
           );
 
        let pos33 = { Pos.row = 3; col = 3 } in
-       let expect = Failure "position is outside the board" in
+       let expect = Failure "Position is outside the board" in
        OUnit2.assert_raises expect (fun _ -> B.get_tile_at board pos33);
        OUnit2.assert_raises expect (fun _ -> B.remove_tile_at board pos33);
       );

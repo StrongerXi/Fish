@@ -3,7 +3,7 @@
     NOTE that it's immutable *)
 type t
 
-(** Creating a penguin at given position, holding no fish *)
+(** Creating a penguin at given position *)
 val create : Position.t -> t
 
 val set_position : t -> Position.t -> t

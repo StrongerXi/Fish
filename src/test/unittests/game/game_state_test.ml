@@ -63,8 +63,8 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let board = GS.get_board_copy state1 in
         let tile11 = B.get_tile_at board pos11 in
         let tile13 = B.get_tile_at board pos13 in
-        OUnit2.assert_equal true @@ T.is_empty tile11;
-        OUnit2.assert_equal false @@ T.is_empty tile13;
+        OUnit2.assert_equal true @@ T.is_hole tile11;
+        OUnit2.assert_equal false @@ T.is_hole tile13;
         OUnit2.assert_equal 3 @@ T.get_fish tile13; (* fish not changed yet *)
 
         (* Player should be updated after move *)
@@ -90,8 +90,8 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         |> List.iter (fun pos ->
             let tile = B.get_tile_at board pos in
             if pos = pos11 || pos = pos23
-            then OUnit2.assert_equal true @@ T.is_empty tile
-            else OUnit2.assert_equal false @@ T.is_empty tile)
+            then OUnit2.assert_equal true @@ T.is_hole tile
+            else OUnit2.assert_equal false @@ T.is_hole tile)
       );
   ]
 

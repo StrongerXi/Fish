@@ -1,14 +1,12 @@
-type t = 
-  { fish : int
-  }
+type t = int
 
-let empty_tile = { fish = 0 }
+let hole = 0
 
 let create fish = 
   if fish > 0
-  then { fish }
+  then fish
   else failwith "fish count must be positive"
 
-let get_fish t = t.fish
+let get_fish t = t
 
-let is_empty t = t.fish = 0
+let is_hole t = t = 0

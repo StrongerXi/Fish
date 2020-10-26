@@ -40,10 +40,10 @@ let create config =
 
   let tiles = Array.make_matrix ~dimy:width ~dimx:height @@ Tile.create dft_fish in
   holes |> List.iter
-    ~f:(fun {Position.row; col} -> tiles.(row).(col) <- Tile.empty_tile);
+    ~f:(fun {Position.row; col} -> tiles.(row).(col) <- Tile.hole);
   Position.create_positions_within ~height ~width |> List.iter
     ~f:(fun {Position.row; col} ->
-       if (not @@ Tile.is_empty tiles.(row).(col)) &&
+       if (not @@ Tile.is_hole tiles.(row).(col)) &&
           !one_fish_tile > 0
        then
          tiles.(row).(col) <- Tile.create 1;
@@ -61,12 +61,12 @@ let within_board t { Position.row; col } =
 let get_tile_at t ({ Position.row; col } as pos) =
   if within_board t pos
   then t.tiles.(row).(col)
-  else failwith "position is outside the board"
+  else failwith "Position is outside the board"
 
 let remove_tile_at t ({ Position.row; col } as pos) =
   if within_board t pos
-  then t.tiles.(row).(col) <- Tile.empty_tile
-  else failwith "position is outside the board";
+  then t.tiles.(row).(col) <- Tile.hole
+  else failwith "Position is outside the board";
   t
 
 
@@ -75,7 +75,7 @@ let get_reachable_from t src =
   let rec add_until_cant row col dir acc =
     let pos = { Position.row; col } in
     if within_board t pos &&
-       not @@ Tile.is_empty @@ (get_tile_at t pos)
+       not @@ Tile.is_hole @@ (t.tiles.(row).(col))
     then
       let row, col = Direction.step_in_dir row col dir in
       add_until_cant row col dir (pos::acc)
@@ -96,8 +96,7 @@ let from_tiles tiles =
   match List.map ~f:List.length tiles |> List.max_elt ~compare:Int.compare with
   | None -> failwith "0 width means empty board"
   | Some(width) ->
-    let arr = Array.make_matrix ~dimx:height ~dimy:width Tile.empty_tile in
+    let arr = Array.make_matrix ~dimx:height ~dimy:width Tile.hole in
     List.iteri tiles ~f:(fun row tiles ->
         List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
     { tiles = arr }
-

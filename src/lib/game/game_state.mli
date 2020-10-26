@@ -6,6 +6,10 @@
     It excludes:
       - whose turn it is
       - how to communicate with the actual players
+    It ensures:
+      - all players have distinct colors
+      - no penguin is on a hole
+      - each tile has at most 1 penguin
     NOTE that it's immutable *)
 type t
 
@@ -15,6 +19,8 @@ val create : Board.t -> Player_color.t list -> t
 
 val get_board_copy : t -> Board.t
 
+(** Return a list of players whose ordering conforms with the list of colors
+    from game state creation. *)
 val get_ordered_players : t -> Player_state.t list
 
 (** Return a board after removing all tiles that have a penguin on it *)
@@ -28,7 +34,7 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
 
 (** Move the penguin at 1st position to the 2nd position, and update player
     score accordingly.
-    Errors if any position is out of bound or source is empty *)
+    Errors if any position is out of bound or source is a hole *)
 val move_penguin : t -> Position.t -> Position.t -> t
 
 (** Discouraged unless you have good reason and know what you are doing *)

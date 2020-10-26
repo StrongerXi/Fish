@@ -45,7 +45,7 @@ let tests = OUnit2.(>:::) "player_state_tests" [
     OUnit2.(>::) "test_move_penguin" (fun _ ->
         (* 1. only penguin positions and score are updated, correctly
          * 2. no side effect
-         * 3. return empty when no penguin is at 1st position *)
+         * 3. return None when no penguin is at 1st position *)
         let p1 = P.create PC.Red in
         let src = { Pos.row = 3; col = 5 } in
         let dst = { Pos.row = 3; col = 3 } in

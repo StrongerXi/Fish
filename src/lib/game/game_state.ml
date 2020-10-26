@@ -23,9 +23,9 @@ let get_board_minus_penguins t =
   !board
 
 let place_penguin t color pos =
-  if Board.within_board t.board pos
-  then { t with players = Player_list.place_penguin t.players color pos }
-  else failwith "Position is outside the board"
+  if Tile.is_hole @@ Board.get_tile_at t.board pos
+  then failwith "Cannot place penguin into a hole";
+  { t with players = Player_list.place_penguin t.players color pos }
 
 let move_penguin t src dst =
   let fish = Board.get_tile_at t.board src |> Tile.get_fish in
