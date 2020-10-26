@@ -29,7 +29,7 @@ let find_move (dir_pos : (B.Direction.t * (Pos.t list)) list) : Pos.t option =
     game state.  If such a move can't be found, return [None] *)
 let find_move_and_apply (gs : GS.t) : GS.t option =
   let open Option.Let_syntax in
-  let players = GS.get_player_list gs |> PL.get_ordered_players in
+  let players = GS.get_ordered_players gs in
   let%bind player = List.hd players in
   let%bind penguin = List.hd @@ PS.get_penguins player in
   let src = PN.get_position penguin in

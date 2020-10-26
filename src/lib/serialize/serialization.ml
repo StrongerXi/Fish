@@ -1,6 +1,8 @@
 open !Core
 
 module YB = Yojson.Basic
+module GS = Game_state
+
 type t = YB.t
 
 (* -------------------------------------------------------------- *)
@@ -110,14 +112,9 @@ let to_player (t : t) : Player_state.t option =
   | _ -> None
 ;;
 
-let from_player_list (player_list : Player_list.t) : t =
-  `List(List.map ~f:from_player @@ Player_list.get_ordered_players player_list)
-
-let to_player_list (t : t) : Player_list.t option =
+let to_player_list (t : t) : Player_state.t list option =
   match t with
-  | `List(player_ts) -> 
-    player_ts |> List.map ~f:to_player |> Option.all 
-    |> Option.map ~f:Player_list.from_players
+  | `List(player_ts) -> player_ts |> List.map ~f:to_player |> Option.all
   | _ -> None
 ;;
 
@@ -145,8 +142,9 @@ let to_board_posn (t : t) =
 ;;
 
 let from_game_state gs = 
-  let bt = from_board @@ Game_state.get_board_copy gs in
-  let plt = from_player_list @@ Game_state.get_player_list gs in
+  let bt = from_board @@ GS.get_board_copy gs
+  and plt = `List(List.map ~f:from_player @@ GS.get_ordered_players gs)
+  in
   `Assoc([("board", bt); ("players", plt)])
 ;;
 
@@ -160,7 +158,7 @@ let to_game_state (t : t) =
     let%bind 
       board = to_board board_t and
       players = to_player_list players_t in
-    Some(Game_state.from_board_playerlist board players)
+    Some(GS.from_board_players board players)
   | _ -> None
 ;;
 

@@ -19,7 +19,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let state0 = GS.create board colors in
         let pos11 = { Pos.row = 1; col = 1 } in
         let state1 = GS.place_penguin state0 Color.Brown pos11 in
-        let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
+        let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         let p = List.nth players 1 in
         OUnit2.assert_equal [PN.create pos11;] @@ PS.get_penguins p;
@@ -31,7 +31,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         (* place another one *)
         let pos02 = { Pos.row = 0; col = 2 } in
         let state1 = GS.place_penguin state1 Color.Brown pos02 in
-        let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
+        let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         let p = List.nth players 1 in
         OUnit2.assert_equal [PN.create pos02; PN.create pos11] @@ PS.get_penguins p;
@@ -68,7 +68,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         OUnit2.assert_equal 3 @@ T.get_fish tile13; (* fish not changed yet *)
 
         (* Player should be updated after move *)
-        let players = state1 |> GS.get_player_list |> PL.get_ordered_players in
+        let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         OUnit2.assert_equal 3 @@ PS.get_score @@ List.nth players 1;
         OUnit2.assert_equal 0 @@ PS.get_score @@ List.nth players 0;

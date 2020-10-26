@@ -11,15 +11,15 @@ let create board colors =
   else { board; players = Player_list.create colors }
 
 let get_board_copy t = Board.get_copy t.board
-let get_player_list t = t .players
+let get_ordered_players t = Player_list.get_ordered_players t.players
 
 let get_board_minus_penguins t =
   let board = ref @@ Board.get_copy t.board in
-  Player_list.get_ordered_players t.players |> List.iter
-    ~f:(fun p -> 
-       Player_state.get_penguins p 
-       |> List.map ~f:Penguin.get_position |> List.iter
-         ~f:(fun pos -> board := Board.remove_tile_at !board pos));
+  let remove_penguin_tiles_of_player (p : Player_state.t) : unit =
+    Player_state.get_penguins p |> List.iter ~f:(fun pg -> 
+        board := Board.remove_tile_at !board (Penguin.get_position pg))
+  in
+  get_ordered_players t |> List.iter ~f:remove_penguin_tiles_of_player;
   !board
 
 let place_penguin t color pos =
@@ -33,4 +33,4 @@ let move_penguin t src dst =
   let board = Board.remove_tile_at (Board.get_copy t.board) src in
   { board; players }
 
-let from_board_playerlist board players = { board; players }
+let from_board_players board players = { board; players = Player_list.from_players players }

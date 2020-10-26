@@ -3,7 +3,7 @@ open !Core
 module GS = Game_state
 module PL = Player_list
 module PS = Player_state
-module Order = Util.Order
+module Order = Order
 
 type t =
   { state : GS.t
@@ -12,9 +12,8 @@ type t =
   }
 
 let create state start_color = 
-  let colors = state 
-               |> GS.get_player_list |> PL.get_ordered_players
-               |> List.map ~f:PS.get_player_color 
+  let colors = 
+    state |> GS.get_ordered_players |> List.map ~f:PS.get_player_color
   in
   match Order.create_with_start colors start_color with
   | None -> failwith "Starting player is not in the state"
@@ -31,7 +30,7 @@ let get_current_player t = Order.get_current t.order
     and associates them with the resulting game tree. *)
 let compute_subtrees_with_moves t : (Action.t * t) list =
   let board = GS.get_board_minus_penguins t.state
-  and players = t.state |> GS.get_player_list |> PL.get_ordered_players
+  and players = GS.get_ordered_players t.state
   and current = Order.get_current t.order
   and next_order = Order.rotate t.order in
   (* Return all legal positions a penguin can move to from [src] on [board] *)

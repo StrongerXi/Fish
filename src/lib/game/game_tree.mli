@@ -6,7 +6,8 @@
     NOTE that it's immutable *)
 type t
 
-(** Errors if no player in given state has given color *)
+(** Errors if no player in given state has given color
+    REQUIRES: player turn ordering stays unchanged in this game tree *)
 val create : Game_state.t -> Player_color.t -> t
 
 val get_state : t -> Game_state.t

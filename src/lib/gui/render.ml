@@ -2,7 +2,6 @@ module GS = Game.Game_state
 module BD = Game.Board
 module PC = Game.Player_color
 module PS = Game.Player_state
-module PL = Game.Player_list
 module Tile = Game.Tile
 module Penguin = Game.Penguin
 module Pos = Util.Position
@@ -117,7 +116,7 @@ let render =
      resize_window gs;
      render_board @@ GS.get_board_copy gs;
      let height = gs |> GS.get_board_copy |> BD.get_height in
-     gs |> GS.get_player_list |> PL.get_ordered_players |> List.iter 
+     gs |> GS.get_ordered_players |> List.iter 
        (fun p -> render_player p height);
      Graphics.display_mode true;
      Graphics.synchronize ();
