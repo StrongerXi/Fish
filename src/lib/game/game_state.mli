@@ -23,6 +23,10 @@ val get_board_copy : t -> Board.t
     from game state creation. *)
 val get_ordered_players : t -> Player_state.t list
 
+(** Return the player that has the given color in [t]
+    Errors if no player has the specified color *)
+val get_player_with_color : t -> Player_color.t -> Player_state.t
+
 (** Return a board after removing all tiles that have a penguin on it *)
 val get_board_minus_penguins : t -> Board.t
 

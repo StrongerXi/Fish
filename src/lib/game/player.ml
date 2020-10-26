@@ -8,20 +8,12 @@ type t =
 let get_simple_player color lookahead = Simple(color, lookahead)
 
 let take_turn (Simple(color, lookahead)) gs =
-  (* Return score of player that has [color] in [state] *)
-  let get_player_score (state : Game_state.t) : int = 
-    let opt_player =
-      List.find (Game_state.get_ordered_players state)
-        ~f:(fun p -> Core.phys_equal color (Player_state.get_player_color p)) in
-    match opt_player with
-    | None -> failwith "Player is not in the game state"
-    | Some(p) -> Player_state.get_score p
-  in
   (* Evaluate [gt] from the perspective of [color], by looking ahead [steps_left]
    * more turns via the minimax algorithm *)
   let rec evaluate_state (steps_left : int) (gt : Game_tree.t) : int =
+    let gs = Game_tree.get_state gt in
     if steps_left = 0
-    then get_player_score @@ Game_tree.get_state gt
+    then Player_state.get_score @@ Game_state.get_player_with_color gs color
     else 
       let score_selector = 
         if Core.phys_same color @@ Game_tree.get_current_player gt
@@ -32,7 +24,8 @@ let take_turn (Simple(color, lookahead)) gs =
         |> List.map ~f:(fun (_, gt) -> evaluate_state (steps_left - 0) gt) 
         |> score_selector in 
       match score_opt with
-      | None -> get_player_score @@ Game_tree.get_state gt
+      | None -> 
+        Player_state.get_score @@ Game_state.get_player_with_color gs color
       | Some(score) -> score
   in
   let tree = Game_tree.create gs color in

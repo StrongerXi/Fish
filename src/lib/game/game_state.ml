@@ -15,6 +15,14 @@ module Player_list = struct
   let create (colors : Player_color.t list) : t = 
     { players = List.map ~f:Player_state.create colors }
 
+
+  (** Get states of all the players, ordered by how they take turns *)
+  let get_ordered_players t : Player_state.t list = t.players
+
+  let get_player_with_color t color = 
+    List.find t.players
+      ~f:(fun p -> Core.phys_equal color (Player_state.get_player_color p))
+
   let any_player_has_penguin_at t (pos : Position.t) : bool =
     let player_has_penguin_at_pos (p : Player_state.t) : bool =
       Player_state.get_penguins p 
@@ -55,9 +63,6 @@ module Player_list = struct
     in
     { players = update_players t.players }
 
-  (** Get states of all the players, ordered by how they take turns *)
-  let get_ordered_players t : Player_state.t list = t.players
-
   (** Discouraged unless you have good reason and know what you are doing *)
   let from_players (players : Player_state.t list) : t = { players }
 end
@@ -74,7 +79,13 @@ let create board colors =
   else { board; players = Player_list.create colors }
 
 let get_board_copy t = Board.get_copy t.board
+
 let get_ordered_players t = Player_list.get_ordered_players t.players
+
+let get_player_with_color t color = 
+  match Player_list.get_player_with_color t.players color with
+  | None -> failwith "No player has specified color in this game state"
+  | Some(p) -> p
 
 let get_board_minus_penguins t =
   let board = ref @@ Board.get_copy t.board in

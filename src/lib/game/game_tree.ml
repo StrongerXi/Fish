@@ -29,8 +29,7 @@ let get_current_player t = CQ.get_current t.order
     and associates them with the resulting game tree. *)
 let compute_subtrees_with_moves t : (Action.t * t) list =
   let board = GS.get_board_minus_penguins t.state
-  and players = GS.get_ordered_players t.state
-  and current = CQ.get_current t.order
+  and current_color = CQ.get_current t.order
   and next_order = CQ.rotate t.order in
   (* Return all legal positions a penguin can move to from [src] on [board] *)
   let get_legal_move_dsts_from (src : Position.t) : Position.t list =
@@ -38,12 +37,8 @@ let compute_subtrees_with_moves t : (Action.t * t) list =
     |> List.map ~f:(fun (_, dsts) -> dsts) |> List.concat
   in
   let open List.Let_syntax in
-  let%bind src = 
-    (* [create] guarantees current player is in the player list *)
-    List.find_exn players
-      ~f:(fun p -> Core.phys_equal current (PS.get_player_color p)) 
-    |> PS.get_penguins |> List.map ~f:Penguin.get_position
-  in
+  let%bind src = GS.get_player_with_color t.state current_color
+                 |> PS.get_penguins |> List.map ~f:Penguin.get_position in
   let%bind dst = get_legal_move_dsts_from src in
   let next_state = GS.move_penguin t.state src dst in
   let act = Action.Move(src, dst) in
