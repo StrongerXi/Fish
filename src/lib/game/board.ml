@@ -71,23 +71,19 @@ let remove_tile_at t ({ Position.row; col } as pos) =
 
 
 let get_reachable_from t src =
-  (* From (row, col), attempt to add AMAP position to `acc` following `dir` *)
+  (* From (row, col), attempt to add AMAP position to `acc` following `dir`
+   * Assume (row, col) has been considered. *)
   let rec add_until_cant row col dir acc =
+    let row, col = Direction.step_in_dir row col dir in
     let pos = { Position.row; col } in
-    if within_board t pos &&
-       not @@ Tile.is_hole @@ (t.tiles.(row).(col))
-    then
-      let row, col = Direction.step_in_dir row col dir in
-      add_until_cant row col dir (pos::acc)
+    if (within_board t pos) && (not @@ Tile.is_hole @@ t.tiles.(row).(col))
+    then add_until_cant row col dir (pos::acc)
     else List.rev acc
   in
   if not @@ within_board t src
   then []
-  else
-    Direction.values |> List.map
-      ~f:(fun dir -> 
-          let row, col = Direction.step_in_dir src.row src.col dir in
-          (dir, add_until_cant row col dir []))
+  else List.map Direction.values
+      ~f:(fun dir -> (dir, add_until_cant src.row src.col dir []))
 
 let get_copy t = { tiles = Array.map ~f:Array.copy t.tiles }
 
