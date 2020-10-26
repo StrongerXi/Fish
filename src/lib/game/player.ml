@@ -13,6 +13,10 @@ let get_simple_player color lookahead = Simple(color, lookahead)
 ;;
 
 let take_turn (Simple(color, lookahead)) gs =
+  let current_player_has_color (gt : Game_tree.t) : bool =
+    let state = Game_tree.get_state gt in
+    Core.phys_same color @@ PS.get_player_color @@ GS.get_current_player state
+  in
   (* Evaluate [gt] from the perspective of [color], by looking ahead [steps_left]
    * more turns via the minimax algorithm *)
   let rec evaluate_state (steps_left : int) (gt : Game_tree.t) : int =
@@ -21,7 +25,7 @@ let take_turn (Simple(color, lookahead)) gs =
     then PS.get_score @@ GS.get_player_with_color gs color
     else 
       let score_selector = 
-        if Core.phys_same color @@ Game_tree.get_current_player gt
+        if current_player_has_color gt
         then List.max_elt ~compare:Int.compare
         else List.min_elt ~compare:Int.compare in
       let score_opt =  
@@ -32,9 +36,8 @@ let take_turn (Simple(color, lookahead)) gs =
       | None -> PS.get_score @@ GS.get_player_with_color gs color
       | Some(score) -> score
   in
-  let tree = Game_tree.create gs color in
   let best_scored_move =
-    Game_tree.get_subtrees tree 
+    Game_tree.create gs |> Game_tree.get_subtrees
     |> List.map ~f:(fun (act, gt) -> (act, evaluate_state (lookahead - 1) gt))
     |> List.max_elt ~compare:(fun (_, s1) (_, s2) -> Int.compare s1 s2)
     (* TODO implement tie breaker *)

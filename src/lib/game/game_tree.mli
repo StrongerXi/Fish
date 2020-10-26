@@ -1,20 +1,17 @@
 (** A [t] represents the root node of a (sub) game tree.
     It includes:
       - a game state.
-      - knowledge of current player.
-    The module provides functionality to generate subsequent game nodes.
+      - subsequent game states and the actions to get there (lazily generated)
     NOTE that it's immutable *)
 type t
 module Player_color = Player_state.Player_color
 
-(** Errors if no player in given state has given color
-    REQUIRES: player turn ordering stays unchanged in this game tree *)
-val create : Game_state.t -> Player_color.t -> t
+(** Create a game tree starting from the given state *)
+val create : Game_state.t -> t
 
 val get_state : t -> Game_state.t
-val get_current_player : t -> Player_color.t
 
 (** Return a list that associates each of the legal action from current player
-    to the resulting state from that action. An empty list means this is a leaf
-    node. *)
+    in the game state to the resulting state from that action. 
+    An empty list means this is a leaf node. *)
 val get_subtrees : t -> (Action.t * t) list

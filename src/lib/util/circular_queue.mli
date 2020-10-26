@@ -2,13 +2,16 @@
     element being the "current" in the queue. *)
 type 'a t
 
-(** Create a circular queue with elements from the given list, with given element
-    being the "current", while preserving their ordering in the list.
-    Return [None] if list is empty or given element is not in the list *)
-val create_with_start : 'a list -> 'a -> 'a t option
+(** Create a circular queue with given element as the "current", and 
+    elements from the given list, while preserving their order. *)
+val create : 'a -> 'a list -> 'a t
 
 (** Return the "current" element in this queue *)
 val get_current : 'a t -> 'a
 
 (** Rotate "current" element to the next one in the queue *)
 val rotate : 'a t -> 'a t
+
+(** Return a list where the first element is the "current" element in the queue,
+    and the rest are in order *)
+val to_list : 'a t -> 'a list

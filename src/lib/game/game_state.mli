@@ -3,20 +3,20 @@ module Player_color = Player_state.Player_color
 (** A [t] represents a snapshot of the game state at a certain time.
     It includes:
       - the board state
-      - state of all participating players (with unique colors)
-      - the order in which players take turn
+      - state of all participating players
+      - the order in which players take turn, and the current player
     It excludes:
       - whose turn it is
       - how to communicate with the actual players
     It ensures:
-      - all players have distinct colors
+      - all players have distinct colors, and there is at least 1 player.
       - no penguin is on a hole
       - each tile has at most 1 penguin
     NOTE that it's immutable *)
 type t
 
 (** Create a game state with given board and participating players 
-    Errors if there are duplicates in the colors *)
+    Errors if there are duplicates in the colors, or if the list is empty. *)
 val create : Board.t -> Player_color.t list -> t
 
 val get_board_copy : t -> Board.t
@@ -31,6 +31,12 @@ val get_player_with_color : t -> Player_color.t -> Player_state.t
 
 (** Return a board after removing all tiles that have a penguin on it *)
 val get_board_minus_penguins : t -> Board.t
+
+(** Return the current player in [t] *)
+val get_current_player : t -> Player_state.t
+
+(** Rotate current player to the next player *)
+val rotate_to_next_player : t -> t
 
 (** Place a new penguin with given color at given position on the board.
     Errors if 
