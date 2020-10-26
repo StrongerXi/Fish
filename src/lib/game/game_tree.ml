@@ -3,7 +3,7 @@ open !Core
 module GS = Game_state
 module PL = Player_list
 module PS = Player_state
-module Order = Order
+module Order = Util.Circular_queue
 
 type t =
   { state : GS.t
