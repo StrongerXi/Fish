@@ -24,6 +24,7 @@ module Direction = struct
     | Southeast -> (row + 1, col + if even_row then 0 else   1)
     | Northwest -> (row - 1, col + if even_row then ~-1 else 0)
     | Southwest -> (row + 1, col + if even_row then ~-1 else 0)
+  ;;
 
   let values = [North; South; Northeast; Southeast; Northwest; Southwest]
 end
@@ -42,6 +43,7 @@ module Config = struct
                                 holes = [];
                                 min_one_fish_tile = 0;
                                 default_num_of_fish = 1; }
+  ;;
 
   let set_width width t = { t with width }
   let get_width  t = t.width
@@ -82,25 +84,31 @@ let create config =
           tiles.(row).(col) <- Tile.create 1;
         one_fish_tiles_left := !one_fish_tiles_left - 1);
   { tiles }
+;;
 
 let get_width t = Array.length t.tiles.(0)
+;;
 
 let get_height t = Array.length t.tiles
+;;
 
 let within_board t { Position.row; col } =
   let width, height = get_width t, get_height t in
   0 <= row && row < height && 0 <= col && col < width
+;;
 
 let get_tile_at t ({ Position.row; col } as pos) =
   if within_board t pos
   then t.tiles.(row).(col)
   else failwith "Position is outside the board"
+;;
 
 let remove_tile_at t ({ Position.row; col } as pos) =
   if within_board t pos
   then t.tiles.(row).(col) <- Tile.hole
   else failwith "Position is outside the board";
   t
+;;
 
 
 let get_reachable_from t src =
@@ -117,8 +125,10 @@ let get_reachable_from t src =
   then []
   else List.map Direction.values
       ~f:(fun dir -> (dir, add_until_cant src.row src.col dir []))
+;;
 
 let get_copy t = { tiles = Array.map ~f:Array.copy t.tiles }
+;;
 
 let from_tiles tiles =
   let height = List.length tiles in
@@ -129,3 +139,4 @@ let from_tiles tiles =
     List.iteri tiles ~f:(fun row tiles ->
         List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
     { tiles = arr }
+;;

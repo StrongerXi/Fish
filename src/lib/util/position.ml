@@ -14,3 +14,4 @@ let compare (p1 : t) (p2 : t) =
   if p1_cmp == 0
   then Int.compare p1.col p2.col
   else p1_cmp
+;;
