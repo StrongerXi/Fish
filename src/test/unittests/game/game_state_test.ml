@@ -3,7 +3,6 @@ module B = Fish.Game.Board
 module Conf = Fish.Game.Board.Config
 module Color = Fish.Game.Player_color
 module Pos = Fish.Util.Position
-module PL = Fish.Game.Player_list
 module PS = Fish.Game.Player_state
 module PN = Fish.Game.Penguin
 module T = Fish.Game.Tile

@@ -1,5 +1,59 @@
 open !Core
 
+(* For implementation convenience *)
+module Player_list = struct
+  (** A [t] represents state of all the players in a fish game, including their
+      turn order.
+      It's agnostic to the board (boundary, etc.)
+      NOTE that it's immutable *)
+  type t =
+    { players : Player_state.t list
+    }
+
+  (** Create a [t] with 1 player for each of the given colors.
+      Errors if there exists any duplicates *)
+  let create (colors : Player_color.t list) : t = 
+    { players = List.map ~f:Player_state.create colors }
+
+  (** Move the penguin at 1st position to the 2nd position. The integer represents
+      the # of fish on the tile at 1st position  Update player score based on this
+      # of fish.
+      Errors if no penguin is at source position *)
+  let move_penguin t (src: Position.t) (dst : Position.t) (fish : int) : t =
+    let rec update_players players =
+      match players with
+      | [] -> failwith "No penguin resides at source position"
+      | p::players ->
+        match Player_state.move_penguin p src dst with
+        | None    -> p::(update_players players)
+        | Some(p) ->
+          let new_score = fish + Player_state.get_score p in
+          (Player_state.set_score p new_score)::players
+    in
+    { players = update_players t.players }
+
+  (** Place a new penguin with given color at given position on the board.
+      Errors if the no the participating player has given color *)
+  let place_penguin t (color : Player_color.t) (pos : Position.t) : t =
+    let penguin = Penguin.create pos in
+    let rec update_players players =
+      match players with
+      | [] -> failwith "No player has given color"
+      | p::players ->
+        if Core.phys_equal color @@ Player_state.get_player_color p
+        then (Player_state.add_penguin p penguin)::players
+        else p::(update_players players)
+    in
+    { players = update_players t.players }
+
+  (** Get states of all the players, ordered by how they take turns *)
+  let get_ordered_players t : Player_state.t list = t.players
+
+  (** Discouraged unless you have good reason and know what you are doing *)
+  let from_players (players : Player_state.t list) : t = { players }
+end
+
+
 type t =
   { board : Board.t
   ; players : Player_list.t

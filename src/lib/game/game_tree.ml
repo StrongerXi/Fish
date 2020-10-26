@@ -1,7 +1,6 @@
 open !Core
 
 module GS = Game_state
-module PL = Player_list
 module PS = Player_state
 module CQ = Util.Circular_queue
 

@@ -3,7 +3,6 @@ module S = Fish.Serialize.Serialization
 module B = Fish.Game.Board
 module GS = Fish.Game.Game_state
 module PS = Fish.Game.Player_state
-module PL = Fish.Game.Player_list
 module PN = Fish.Game.Penguin
 module Pos = Fish.Util.Position
 
