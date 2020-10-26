@@ -3,11 +3,11 @@ open !Core
 module GS = Game_state
 module PL = Player_list
 module PS = Player_state
-module Order = Util.Circular_queue
+module CQ = Util.Circular_queue
 
 type t =
   { state : GS.t
-  ; order : Player_color.t Order.t
+  ; order : Player_color.t CQ.t
   ; subtrees : (Action.t * t) list option ref
   }
 
@@ -15,7 +15,7 @@ let create state start_color =
   let colors = 
     state |> GS.get_ordered_players |> List.map ~f:PS.get_player_color
   in
-  match Order.create_with_start colors start_color with
+  match CQ.create_with_start colors start_color with
   | None -> failwith "Starting player is not in the state"
   | Some(order) -> { state; order; subtrees = ref None }
 ;;
@@ -23,7 +23,7 @@ let create state start_color =
 let get_state t = t.state
 ;;
 
-let get_current_player t = Order.get_current t.order
+let get_current_player t = CQ.get_current t.order
 ;;
 
 (** A helper function that computes all legal moves for [t]'s current player,
@@ -31,8 +31,8 @@ let get_current_player t = Order.get_current t.order
 let compute_subtrees_with_moves t : (Action.t * t) list =
   let board = GS.get_board_minus_penguins t.state
   and players = GS.get_ordered_players t.state
-  and current = Order.get_current t.order
-  and next_order = Order.rotate t.order in
+  and current = CQ.get_current t.order
+  and next_order = CQ.rotate t.order in
   (* Return all legal positions a penguin can move to from [src] on [board] *)
   let get_legal_move_dsts_from (src : Position.t) : Position.t list =
     Board.get_reachable_from board src
@@ -66,7 +66,7 @@ and skip_to_moveable_tree t : t list =
     match compute_subtrees_with_moves t with
     | _::_ -> t::acc
     | [] -> (* current player in [t] can't move, skip it *)
-      let next_t = { t with order = Order.rotate t.order } in
+      let next_t = { t with order = CQ.rotate t.order } in
       let next_color = get_current_player next_t in
       if Core.phys_same next_color start_color
       then [] (* no player was able to move *)

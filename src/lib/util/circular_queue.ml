@@ -7,7 +7,7 @@ type 'a t =
   ; prevs : 'a list (* 1st element in [prevs] is the one before [current] *)
   }
 
-(** Create an ordering via the order of elements in [xs] *)
+(** Create a circular queue following the order of elements in [xs] *)
 let create_exn (xs : 'a list) =
   match xs with
   | [] -> failwith "An order must be non-empty"
