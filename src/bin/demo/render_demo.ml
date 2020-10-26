@@ -1,13 +1,14 @@
 open Fish.Gui
 open Fish.Game
 open Fish.Util
+module Config = Fish.Game.Board.Config
 
 let () =
   let board = 
-    Board_config.create ~width:3 ~height:5
-    |> Board_config.set_default_num_of_fish 3
-    |> Board_config.set_min_num_of_one_fish_tile 3
-    |> Board_config.set_holes [ { Position.row = 0; col = 0 }; ]
+    Config.create ~width:3 ~height:5
+    |> Config.set_default_num_of_fish 3
+    |> Config.set_min_num_of_one_fish_tile 3
+    |> Config.set_holes [ { Position.row = 0; col = 0 }; ]
     |> Board.create
   in
   let players = [Player_color.Black; Player_color.White;] in

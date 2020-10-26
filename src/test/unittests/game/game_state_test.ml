@@ -1,6 +1,6 @@
 module GS = Fish.Game.Game_state
 module B = Fish.Game.Board
-module Conf = Fish.Game.Board_config
+module Conf = Fish.Game.Board.Config
 module Color = Fish.Game.Player_color
 module Pos = Fish.Util.Position
 module PL = Fish.Game.Player_list

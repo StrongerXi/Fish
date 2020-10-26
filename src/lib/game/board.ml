@@ -1,5 +1,4 @@
 open !Core
-module C = Board_config
 
 type t =
   { tiles : Tile.t array array
@@ -29,25 +28,59 @@ module Direction = struct
   let values = [North; South; Northeast; Southeast; Northwest; Southwest]
 end
 
+
+module Config = struct
+  type t =
+    { width : int
+    ; height : int
+    ; holes : Position.t list
+    ; min_one_fish_tile : int
+    ; default_num_of_fish : int
+    }
+
+  let create ~height ~width = { width; height;
+                                holes = [];
+                                min_one_fish_tile = 0;
+                                default_num_of_fish = 1; }
+
+  let set_width width t = { t with width }
+  let get_width  t = t.width
+
+  let set_height height t = { t with height }
+  let get_height  t = t.height
+
+  let set_holes holes t = { t with holes }
+  let get_holes  t = t.holes
+
+  let set_min_num_of_one_fish_tile min_one_fish_tile t = 
+    { t with min_one_fish_tile }
+  let get_min_num_of_one_fish_tile  t = t.min_one_fish_tile
+
+  let set_default_num_of_fish default_num_of_fish t = 
+    { t with default_num_of_fish }
+  let get_default_num_of_fish  t = t.default_num_of_fish
+end
+
+module C = Config
+
 let create config =
-  let width, height = C.get_width config, C.get_height config in
+  let width, height = Config.get_width config, Config.get_height config in
   if width <= 0 || height <= 0
   then failwith "Board dimension must be positive";
-
-  let holes = C.get_holes config in
-  let dft_fish = C.get_default_num_of_fish config in
-  let one_fish_tile = ref @@ C.get_min_num_of_one_fish_tile config in
-
-  let tiles = Array.make_matrix ~dimy:width ~dimx:height @@ Tile.create dft_fish in
+  let holes = Config.get_holes config in
+  let dft_fish = Config.get_default_num_of_fish config in
+  let one_fish_tiles_left = ref @@ Config.get_min_num_of_one_fish_tile config in
+  let default_tile = Tile.create dft_fish in
+  let tiles = Array.make_matrix ~dimy:width ~dimx:height default_tile in
   holes |> List.iter
     ~f:(fun {Position.row; col} -> tiles.(row).(col) <- Tile.hole);
   Position.create_positions_within ~height ~width |> List.iter
     ~f:(fun {Position.row; col} ->
-       if (not @@ Tile.is_hole tiles.(row).(col)) &&
-          !one_fish_tile > 0
-       then
-         tiles.(row).(col) <- Tile.create 1;
-         one_fish_tile := !one_fish_tile - 1);
+        if (not @@ Tile.is_hole tiles.(row).(col)) &&
+           !one_fish_tiles_left > 0
+        then
+          tiles.(row).(col) <- Tile.create 1;
+        one_fish_tiles_left := !one_fish_tiles_left - 1);
   { tiles }
 
 let get_width t = Array.length t.tiles.(0)
