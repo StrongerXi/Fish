@@ -6,6 +6,16 @@
 *)
 type t
 
+module Player_color : sig
+  (** A [t] represents the color of player and their penguins in a Fish game *)
+  type t =
+    | Red
+    | Brown
+    | Black
+    | White
+  [@@deriving compare]
+end
+
 val create : Player_color.t -> t
 val get_player_color : t -> Player_color.t
 

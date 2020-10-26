@@ -1,6 +1,6 @@
 module GS = Game.Game_state
 module BD = Game.Board
-module PC = Game.Player_color
+module PC = Game.Player_state.Player_color
 module PS = Game.Player_state
 module Tile = Game.Tile
 module Penguin = Game.Penguin

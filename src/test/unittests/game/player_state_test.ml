@@ -1,5 +1,5 @@
 module P = Fish.Game.Player_state
-module PC = Fish.Game.Player_color
+module PC = Fish.Game.Player_state.Player_color
 module PN = Fish.Game.Penguin
 module Pos = Fish.Util.Position
 

@@ -1,5 +1,7 @@
 open !Core
 
+module Player_color = Player_state.Player_color
+
 (* For implementation convenience *)
 module Player_list = struct
   (** A [t] represents state of all the players in a fish game, including their

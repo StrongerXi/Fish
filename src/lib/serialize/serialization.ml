@@ -2,6 +2,7 @@ open !Core
 
 module YB = Yojson.Basic
 module GS = Game_state
+module Player_color = Player_state.Player_color
 
 type t = YB.t
 

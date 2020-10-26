@@ -1,3 +1,14 @@
+
+module Player_color = struct
+  (** A [t] represents the color of player and their penguins in a Fish game *)
+  type t =
+    | Red
+    | Brown
+    | Black
+    | White
+  [@@deriving compare]
+end
+
 type t =
   { color : Player_color.t
   ; score : int

@@ -1,3 +1,5 @@
+module Player_color = Player_state.Player_color
+
 (** A [t] represents a snapshot of the game state at a certain time.
     It includes:
       - the board state

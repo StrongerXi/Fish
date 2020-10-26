@@ -5,6 +5,7 @@
     The module provides functionality to generate subsequent game nodes.
     NOTE that it's immutable *)
 type t
+module Player_color = Player_state.Player_color
 
 (** Errors if no player in given state has given color
     REQUIRES: player turn ordering stays unchanged in this game tree *)

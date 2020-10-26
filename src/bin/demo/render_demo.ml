@@ -1,7 +1,9 @@
-open Fish.Gui
-open Fish.Game
-open Fish.Util
+module Game_state = Fish.Game.Game_state
+module Board = Fish.Game.Board
 module Config = Fish.Game.Board.Config
+module Player_color = Fish.Game.Player_state.Player_color
+module Position = Fish.Util.Position
+module Render = Fish.Gui.Render
 
 let () =
   let board = 
@@ -9,8 +11,7 @@ let () =
     |> Config.set_default_num_of_fish 3
     |> Config.set_min_num_of_one_fish_tile 3
     |> Config.set_holes [ { Position.row = 0; col = 0 }; ]
-    |> Board.create
-  in
+    |> Board.create in
   let players = [Player_color.Black; Player_color.White;] in
   let pos11 = { Position.row = 1; col = 1 } in
   let state = Game_state.create board players in
