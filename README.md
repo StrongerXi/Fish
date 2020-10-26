@@ -24,3 +24,7 @@ _TODO_
 - wait for the `include_subdirs qualified` feature from dune, so that we can
   have modules in subdirectories referred to like package system in Java.
   [Reference](https://github.com/ocaml/dune/pull/3111)
+- Explore [inline
+  tests](https://github.com/janestreet/ppx_inline_test/blob/master/example/example.ml),
+  which seems to behave like Racket's test modules, and enable hiding certain
+  modules, such as `player_list`?
