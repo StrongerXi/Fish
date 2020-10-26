@@ -34,7 +34,10 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
 
 (** Move the penguin at 1st position to the 2nd position, and update player
     score accordingly.
-    Errors if any position is out of bound or source is a hole *)
+    Errors if 
+    - any position is out of bound 
+    - no penguin exists at source position
+    - a penguin already exists at the target position *)
 val move_penguin : t -> Position.t -> Position.t -> t
 
 (** Discouraged unless you have good reason and know what you are doing *)

@@ -15,10 +15,17 @@ module Player_list = struct
   let create (colors : Player_color.t list) : t = 
     { players = List.map ~f:Player_state.create colors }
 
-  (** Move the penguin at 1st position to the 2nd position. The integer represents
-      the # of fish on the tile at 1st position  Update player score based on this
-      # of fish.
-      Errors if no penguin is at source position *)
+  let any_player_has_penguin_at t (pos : Position.t) : bool =
+    let player_has_penguin_at_pos (p : Player_state.t) : bool =
+      Player_state.get_penguins p 
+      |> List.map ~f:Penguin.get_position
+      |> List.exists ~f:([%compare.equal: Position.t] pos)
+    in
+    List.exists t.players ~f:player_has_penguin_at_pos
+
+  (** Move the penguin at [src] to [dst]. The integer represents the # of fish
+      on the tile at 1st position  Update player score based on this # of fish.
+      Errors if no penguin is at [src], or a penguin exists at [dst] *)
   let move_penguin t (src: Position.t) (dst : Position.t) (fish : int) : t =
     let rec update_players players =
       match players with
@@ -30,7 +37,9 @@ module Player_list = struct
           let new_score = fish + Player_state.get_score p in
           (Player_state.set_score p new_score)::players
     in
-    { players = update_players t.players }
+    if any_player_has_penguin_at t dst
+    then failwith "Cannot move penguin to a tile occupied by another penguin"
+    else { players = update_players t.players }
 
   (** Place a new penguin with given color at given position on the board.
       Errors if the no the participating player has given color *)
@@ -78,7 +87,7 @@ let get_board_minus_penguins t =
 
 let place_penguin t color pos =
   if Tile.is_hole @@ Board.get_tile_at t.board pos
-  then failwith "Cannot place penguin into a hole";
+  then failwith "Cannot place penguin onto a hole";
   { t with players = Player_list.place_penguin t.players color pos }
 
 let move_penguin t src dst =

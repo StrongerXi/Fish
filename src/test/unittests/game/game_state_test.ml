@@ -10,8 +10,10 @@ module T = Fish.Game.Tile
 let tests = OUnit2.(>:::) "game_state_tests" [
 
     OUnit2.(>::) "test_place_penguin" (fun _ ->
+        let hole_pos = { Pos.row = 2; col = 2 } in
         let board = Conf.create ~width:3 ~height:3
                     |> Conf.set_default_num_of_fish 4
+                    |> Conf.set_holes [hole_pos;]
                     |> B.create
         in
         let colors = [Color.Black; Color.Brown; Color.Red;] in
@@ -35,13 +37,16 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let p = List.nth players 1 in
         OUnit2.assert_equal [PN.create pos02; PN.create pos11] @@ PS.get_penguins p;
 
-        (* fails when input is bad *)
+        (* fails as expected when input is bad *)
         let expect = Failure "Position is outside the board" in
         OUnit2.assert_raises expect (fun () -> 
             GS.place_penguin state0 Color.Brown { Pos.row = 3; col = 3 });
         let expect = Failure "No player has given color" in
         OUnit2.assert_raises expect (fun () -> 
             GS.place_penguin state0 Color.White pos11);
+        let expect = Failure "Cannot place penguin onto a hole" in
+        OUnit2.assert_raises expect (fun () -> 
+            GS.place_penguin state0 Color.White hole_pos);
       );
 
     OUnit2.(>::) "test_move_penguin" (fun _ ->
@@ -53,6 +58,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         in
         let colors = [Color.Black; Color.Red;] in
         let pos11 = { Pos.row = 1; col = 1 } in
+        let pos12 = { Pos.row = 1; col = 2 } in
         let pos13 = { Pos.row = 1; col = 3 } in
         let state0 = GS.create board colors in
         let state0 = GS.place_penguin state0 Color.Red pos11 in
@@ -71,6 +77,22 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         OUnit2.assert_equal (List.length colors) @@ List.length players;
         OUnit2.assert_equal 3 @@ PS.get_score @@ List.nth players 1;
         OUnit2.assert_equal 0 @@ PS.get_score @@ List.nth players 0;
+
+        (* fails as expected when input is bad *)
+        let expect = Failure "Position is outside the board" in
+        OUnit2.assert_raises expect 
+          (fun () -> GS.move_penguin state1 {Pos.row = 5; col = 1} pos12);
+        let expect = Failure "Position is outside the board" in
+        OUnit2.assert_raises expect 
+          (fun () -> GS.move_penguin state1 {Pos.row = 0; col = 6} pos11);
+        let expect = Failure "No penguin resides at source position" in
+        OUnit2.assert_raises expect 
+          (fun () -> GS.move_penguin state1 pos11 pos12);
+        let expect = 
+          Failure "Cannot move penguin to a tile occupied by another penguin" in
+        let state2 = GS.place_penguin state1 Color.Black pos12 in
+        OUnit2.assert_raises expect 
+          (fun () -> GS.move_penguin state2 pos13 pos12);
       );
 
     OUnit2.(>::) "test_get_board_minus_penguins" (fun _ ->
