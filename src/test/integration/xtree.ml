@@ -5,8 +5,6 @@ module Action = Fish.Game.Action
 module Move = Fish.Game.Action.Move
 module Game_tree = Fish.Game.Game_tree
 module GS = Fish.Game.Game_state
-module PS = Fish.Game.Player_state
-module PN = Fish.Game.Penguin
 module Pos = Fish.Util.Position
 
 let preference =
@@ -24,39 +22,45 @@ let find_moves (moves : Move.t list) (dsts : Pos.t list) : Move.t list =
       match List.filter ~f:(fun m -> Core.phys_equal d m.dst) moves with
       | [] -> go dsts
       | moves -> moves
-  in 
-  go dsts
+  in go dsts
 
+(** Return all the Moves within [actions], which might contain other types of
+    actions. *)
 let rec get_moves_from_actions (actions : Action.t list) :  Move.t list =
   match actions with
   | [] -> []
   | Action.Skip::rest -> get_moves_from_actions rest
   | Action.Move(m)::rest -> m::(get_moves_from_actions rest)
 
-(** deserialize a move_response_query object, apply the specified move, and find
-    the move for next player that places a penguin onto a tile near previous
-    move's destination, based on directional preference in [preference]. Break
-    ties by selecting the top-leftmost move source. Output the selected move, or
-    false if not possible *)
+
+(** apply the specified move, and find the move for next player that places a
+    penguin onto a tile near previous move's destination, based on directional
+    preference in [preference]. Break ties by selecting the top-leftmost move
+    source. Output the selected move, or false if not possible *)
+let select_next_move_if_possible 
+    (state : GS.t) (src : Pos.t) (dst : Pos.t) : Move.t option =
+  let open Option.Let_syntax in
+  let subtrees = Game_tree.create state |> Game_tree.get_subtrees
+  and move = Action.Move({ src; dst }) in
+  let%bind subtree = List.Assoc.find ~equal:Core.phys_equal subtrees move in
+  let moves = Game_tree.get_subtrees subtree 
+              |> List.map ~f:(fun (move, _) -> move)
+              |> get_moves_from_actions in
+  let dsts = List.map ~f:(B.Direction.step_from dst) preference in
+  let moves = find_moves moves dsts (* break ties here (if any) *)
+              |> List.sort ~compare:Action.Move.compare in
+  List.hd moves
+
+
+(** deserialize a move_response_query object, and print out the serialized form
+    of selected move from [select_next_move_if_possible], or print "false" if
+    desired move isn't possible. *)
 let () =
-  (* Refactor with let syntax? TODO *)
   let input = Core.In_channel.input_all Core.In_channel.stdin in
   match S.from_string input |> Option.bind ~f:S.to_move_resp_query with
-  | Some(state, src, dst) ->
-    let subtrees = Game_tree.create state |> Game_tree.get_subtrees in
-    let move = Action.Move({ src; dst }) in
-    begin
-      match List.Assoc.find ~equal:Core.phys_equal subtrees move with
-      | None -> print_string "false\n"
-      | Some(subtree) -> 
-        let moves = Game_tree.get_subtrees subtree 
-                      |> List.map ~f:(fun (move, _) -> move)
-                      |> get_moves_from_actions in
-        let dsts = List.map ~f:(B.Direction.step_from dst) preference in
-        let moves = find_moves moves dsts (* break ties here (if any) *)
-                    |> List.sort ~compare:Action.Move.compare in
-        (match moves with
-         | [] -> print_string "false\n"
-         | m::_ -> S.from_action (Action.Move m) |> S.to_string |> Printf.printf "%s\n";)
-    end
   | None -> print_string "Invalid input\n"
+  | Some(state, src, dst) ->
+    match select_next_move_if_possible state src dst with
+    | None  -> print_string "false\n"
+    | Some(m) -> 
+      S.from_action (Action.Move m) |> S.to_string |> Printf.printf "%s\n";
