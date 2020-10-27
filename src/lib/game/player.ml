@@ -12,8 +12,8 @@ type t =
 let get_simple_player lookahead = Simple(lookahead)
 ;;
 
-let take_turn (Simple(lookahead)) gs =
-  let my_color = GS.get_current_player gs |> PS.get_player_color in
+let take_turn (Simple(lookahead)) gt =
+  let my_color = gt |> Game_tree.get_state |> GS.get_current_player |> PS.get_player_color in
   let current_player_is_me (gt : Game_tree.t) : bool =
     let current_player = Game_tree.get_state gt |> GS.get_current_player in
     Core.phys_same my_color @@ PS.get_player_color current_player
@@ -50,8 +50,8 @@ let take_turn (Simple(lookahead)) gs =
     else Int.compare score1 score2
   in
   let best_scored_move =
-    Game_tree.create gs |> Game_tree.get_subtrees
-    |> List.map ~f:(fun (act, gt) -> (act, evaluate_state (lookahead - 1) gt))
+    Game_tree.get_subtrees gt
+    |> List.map ~f:(fun (act, subt) -> (act, evaluate_state (lookahead - 1) subt))
     |> List.max_elt ~compare:scored_act_compare
   in match best_scored_move with
   | None -> failwith "No legal action in given game state"

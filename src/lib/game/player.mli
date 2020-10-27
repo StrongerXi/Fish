@@ -14,8 +14,10 @@ module Player_color = Player_state.Player_color
     *)
 val get_simple_player : int -> t
 
-(** Assuming it's this player's turn, return the action it chooses to perform *)
-val take_turn : t -> Game_state.t -> Action.t
+(** Assuming it's this player's turn, return the action it chooses to perform
+    in the state within given game tree. It can also use the tree for planning
+    purposes, and implicitly take advantage of subtree caching. *)
+val take_turn : t -> Game_tree.t -> Action.t
 
 (** Assuming the game is in the initial penguin placement phase, return the
     position this player would like to place its next penguin *)
