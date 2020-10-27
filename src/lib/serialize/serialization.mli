@@ -3,8 +3,14 @@ open Game
 (** A [t] represents a serialized object *)
 type t
 
+
 (* NOTE some functions are for integration testing purposes 
    to_* functions always return None if [t] is malformed *)
+
+(* Game state, source and destination positions of a penguin move *)
+val to_move_resp_query : t -> (Game_state.t * Position.t * Position.t) option
+val from_action : Action.t -> t
+
 val from_board_posn : (Board.t * Position.t) -> t
 val to_board_posn   : t -> (Board.t * Position.t) option
 

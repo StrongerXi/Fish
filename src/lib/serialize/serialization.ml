@@ -122,6 +122,12 @@ let to_player_list (t : t) : Player_state.t list option =
 (* -------------------------------------------------------------- *)
 (* ---------------------- exported functions -------------------- *)
 (* -------------------------------------------------------------- *)
+
+let from_action act = 
+  match act with
+  | Action.Skip -> `String("skip")
+  | Action.Move(src, dst) -> `List([from_pos src; from_pos dst])
+
 let from_board_posn (board, pos) =
   let bt = from_board board in
   let pt = from_pos pos in
@@ -162,6 +168,20 @@ let to_game_state (t : t) =
     Some(GS.from_board_players board players)
   | _ -> None
 ;;
+
+let to_move_resp_query t =
+  let open Option.Let_syntax in
+  match t with
+  | `Assoc(kv_pairs) ->
+    let%bind 
+      state_t = assoc_opt kv_pairs "state" and
+      src_t = assoc_opt kv_pairs "from" and
+      dst_t = assoc_opt kv_pairs "to" in
+    let%bind 
+      state = to_game_state state_t and
+      src = to_pos src_t and
+      dst = to_pos dst_t in
+    Some(state, src, dst)
 
 let to_string (t : t) = YB.to_string t
 ;;
