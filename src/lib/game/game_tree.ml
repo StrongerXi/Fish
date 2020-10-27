@@ -29,7 +29,7 @@ let compute_subtrees_with_moves t : (Action.t * t) list =
   let%bind src = PS.get_penguins current |> List.map ~f:Penguin.get_position in
   let%bind dst = get_legal_move_dsts_from src in
   let next_state = GS.move_penguin t.state src dst in
-  let act = Action.Move(src, dst) in
+  let act = Action.Move({ src; dst }) in
   return (act, { state = next_state; subtrees = ref None })
 ;;
 

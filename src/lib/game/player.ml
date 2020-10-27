@@ -41,9 +41,7 @@ let take_turn (Simple(lookahead)) gs =
   (* This can break ties in moves with same score *)
   let act_compare (act1 : Action.t) (act2 : Action.t) : int =
     match act1, act2 with
-    | (Action.Move(s1, d1), Action.Move(s2, d2)) ->
-      let source_cmp = Position.compare s1 s2 in
-      if source_cmp = 0 then Position.compare d1 d2 else source_cmp
+    | (Action.Move(m1), Action.Move(m2)) -> Action.Move.compare m1 m2
     | _ -> failwith "Illegal state, we should only be comparing moves"
   in
   let scored_act_compare (act1, score1) (act2, score2) : int =

@@ -27,6 +27,10 @@ module Direction = struct
   ;;
 
   let values = [North; South; Northeast; Southeast; Northwest; Southwest]
+
+  let step_from { Position.row; col } dir =
+    let row, col = step_in_dir row col dir in
+    { Position.row; col }
 end
 
 

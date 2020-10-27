@@ -19,6 +19,10 @@ module Direction : sig
     | Southeast
     | Northwest
     | Southwest
+
+  (** Return the resulting position after taking 1 step
+      from given position in given direction *)
+  val step_from : Position.t -> t -> Position.t
 end
 
 module Config : sig

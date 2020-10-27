@@ -126,7 +126,7 @@ let to_player_list (t : t) : Player_state.t list option =
 let from_action act = 
   match act with
   | Action.Skip -> `String("skip")
-  | Action.Move(src, dst) -> `List([from_pos src; from_pos dst])
+  | Action.Move({ src; dst }) -> `List([from_pos src; from_pos dst])
 
 let from_board_posn (board, pos) =
   let bt = from_board board in
@@ -181,7 +181,8 @@ let to_move_resp_query t =
       state = to_game_state state_t and
       src = to_pos src_t and
       dst = to_pos dst_t in
-    Some(state, src, dst)
+    return (state, src, dst)
+  | _ -> None
 
 let to_string (t : t) = YB.to_string t
 ;;
