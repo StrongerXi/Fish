@@ -3,7 +3,6 @@
     It's responsible for actions from a player, either taking turns or
     responding to certain game events *)
 type t
-module Player_color = Player_state.Player_color
 
 (** Return an AI player with simplistic strategic planning.
     - It always selects the first available position to place a penguin,

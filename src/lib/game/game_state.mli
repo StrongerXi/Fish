@@ -6,8 +6,8 @@ module Player_color = Player_state.Player_color
       - state of all participating players
       - the order in which players take turn, and the current player
     It excludes:
-      - whose turn it is
       - how to communicate with the actual players
+      - what constitutes a "legal" move according to some set of tules
     It ensures:
       - all players have distinct colors, and there is at least 1 player.
       - no penguin is on a hole
@@ -22,7 +22,7 @@ val create : Board.t -> Player_color.t list -> t
 val get_board_copy : t -> Board.t
 
 (** Return a list of players where the first player is the current player, and
-    the rest conforms with their turn order *)
+    the rest conforms with their turn order in the game state. *)
 val get_ordered_players : t -> Player_state.t list
 
 (** Return the player that has the given color in [t]

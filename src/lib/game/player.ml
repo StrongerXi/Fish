@@ -2,7 +2,6 @@ open !Core
 
 module PS = Player_state
 module GS = Game_state
-module Player_color = Player_state.Player_color
 
 (* TODO refactor this by making implementations of players into modules?
  * Then t = Simple of Simple_player.t | ... *)

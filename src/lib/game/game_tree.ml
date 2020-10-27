@@ -2,7 +2,6 @@ open !Core
 
 module GS = Game_state
 module PS = Player_state
-module Player_color = Player_state.Player_color
 
 type t =
   { state : GS.t
