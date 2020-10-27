@@ -38,11 +38,23 @@ let take_turn (Simple(lookahead)) gs =
       | None -> PS.get_score @@ GS.get_player_with_color gs my_color
       | Some(score) -> score
   in
+  (* This can break ties in moves with same score *)
+  let act_compare (act1 : Action.t) (act2 : Action.t) : int =
+    match act1, act2 with
+    | (Action.Move(s1, d1), Action.Move(s2, d2)) ->
+      let source_cmp = Position.compare s1 s2 in
+      if source_cmp = 0 then Position.compare d1 d2 else source_cmp
+    | _ -> failwith "Illegal state, we should only be comparing moves"
+  in
+  let scored_act_compare (act1, score1) (act2, score2) : int =
+    if score1 = score2
+    then act_compare act1 act2
+    else Int.compare score1 score2
+  in
   let best_scored_move =
     Game_tree.create gs |> Game_tree.get_subtrees
     |> List.map ~f:(fun (act, gt) -> (act, evaluate_state (lookahead - 1) gt))
-    |> List.max_elt ~compare:(fun (_, s1) (_, s2) -> Int.compare s1 s2)
-    (* TODO implement tie breaker *)
+    |> List.max_elt ~compare:scored_act_compare
   in match best_scored_move with
   | None -> failwith "No legal action in given game state"
   | Some(act, _) -> act
