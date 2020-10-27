@@ -7,33 +7,35 @@ module Player_color = Player_state.Player_color
 (* TODO refactor this by making implementations of players into modules?
  * Then t = Simple of Simple_player.t | ... *)
 type t =
-  | Simple of Player_color.t * int (* color and # of look ahead *)
+  | Simple of int (* # of look ahead *)
 
-let get_simple_player color lookahead = Simple(color, lookahead)
+let get_simple_player lookahead = Simple(lookahead)
 ;;
 
-let take_turn (Simple(color, lookahead)) gs =
-  let current_player_has_color (gt : Game_tree.t) : bool =
-    let state = Game_tree.get_state gt in
-    Core.phys_same color @@ PS.get_player_color @@ GS.get_current_player state
+let take_turn (Simple(lookahead)) gs =
+  let my_color = GS.get_current_player gs |> PS.get_player_color in
+  let current_player_is_me (gt : Game_tree.t) : bool =
+    let current_player = Game_tree.get_state gt |> GS.get_current_player in
+    Core.phys_same my_color @@ PS.get_player_color current_player
   in
-  (* Evaluate [gt] from the perspective of [color], by looking ahead [steps_left]
-   * more turns via the minimax algorithm *)
-  let rec evaluate_state (steps_left : int) (gt : Game_tree.t) : int =
+  (* Evaluate [gt] from the perspective of player with [color], by looking ahead
+   * as many steps as needed so that the player takes at least [turns_left]
+   * more turns. Evaluate based on the minimax algorithm and player score *)
+  let rec evaluate_state (turns_left : int) (gt : Game_tree.t) : int =
     let gs = Game_tree.get_state gt in
-    if steps_left = 0
-    then PS.get_score @@ GS.get_player_with_color gs color
+    if turns_left = 0
+    then PS.get_score @@ GS.get_player_with_color gs my_color
     else 
-      let score_selector = 
-        if current_player_has_color gt
-        then List.max_elt ~compare:Int.compare
-        else List.min_elt ~compare:Int.compare in
+      let score_selector, next_turns_left = 
+        if current_player_is_me gt
+        then (List.max_elt ~compare:Int.compare, turns_left - 1)
+        else (List.min_elt ~compare:Int.compare, turns_left) in
       let score_opt =  
         Game_tree.get_subtrees gt 
-        |> List.map ~f:(fun (_, gt) -> evaluate_state (steps_left - 0) gt) 
+        |> List.map ~f:(fun (_, gt) -> evaluate_state next_turns_left gt) 
         |> score_selector in 
-      match score_opt with
-      | None -> PS.get_score @@ GS.get_player_with_color gs color
+      match score_opt with (* [None] means end of game *)
+      | None -> PS.get_score @@ GS.get_player_with_color gs my_color
       | Some(score) -> score
   in
   let best_scored_move =

@@ -12,7 +12,7 @@ module Player_color = Player_state.Player_color
     of turns with a minimax algorithm. It breaks tie by selecting the
     lexicalgraphically smallest move, i.e., as if each move is (sr, sc, dr, dc)
     *)
-val get_simple_player : Player_color.t -> int -> t
+val get_simple_player : int -> t
 
 (** Assuming it's this player's turn, return the action it chooses to perform *)
 val take_turn : t -> Game_state.t -> Action.t

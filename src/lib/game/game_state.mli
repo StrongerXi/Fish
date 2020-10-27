@@ -21,8 +21,8 @@ val create : Board.t -> Player_color.t list -> t
 
 val get_board_copy : t -> Board.t
 
-(** Return a list of players whose ordering conforms with the list of colors
-    from game state creation. *)
+(** Return a list of players where the first player is the current player, and
+    the rest conforms with their turn order *)
 val get_ordered_players : t -> Player_state.t list
 
 (** Return the player that has the given color in [t]
