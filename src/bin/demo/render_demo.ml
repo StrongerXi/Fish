@@ -1,4 +1,6 @@
 module Game_state = Fish.Game.Game_state
+module Game_tree = Fish.Game.Game_tree
+module Player = Fish.Game.Player
 module Board = Fish.Game.Board
 module Config = Fish.Game.Board.Config
 module Player_color = Fish.Game.Player_state.Player_color
@@ -7,15 +9,20 @@ module Render = Fish.Gui.Render
 
 let () =
   let board = 
-    Config.create ~width:3 ~height:5
+    Config.create ~width:5 ~height:5
     |> Config.set_default_num_of_fish 3
     |> Config.set_min_num_of_one_fish_tile 3
-    |> Config.set_holes [ { Position.row = 0; col = 0 }; ]
+    |> Config.set_holes [ { Position.row = 0; col = 0 }; 
+                          { Position.row = 1; col = 0 }; 
+                          { Position.row = 0; col = 1 }; 
+                        ]
     |> Board.create in
   let players = [Player_color.Black; Player_color.White;] in
   let pos11 = { Position.row = 1; col = 1 } in
+  let pos31 = { Position.row = 3; col = 1 } in
   let state = Game_state.create board players in
   let state = Game_state.place_penguin state Player_color.Black pos11 in
+  let state = Game_state.place_penguin state Player_color.White pos31 in
   Render.render state;
   (* loop forever makes the canvas go blank after 0.1 sec,
    * this magic incantation keeps canvas there, not sure why... *)
