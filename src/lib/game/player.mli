@@ -4,14 +4,14 @@
     responding to certain game events *)
 type t
 
-(** Return an AI player with simplistic strategic planning.
+(** Create an AI player with simplistic strategic planning.
     - It always selects the first available position to place a penguin,
     starting from (0, 0), and scanning each row from left to right
     - For turn taking, it always makes the move after looking ahead by given #
     of turns with a minimax algorithm. It breaks tie by selecting the
     lexicalgraphically smallest move, i.e., as if each move is (sr, sc, dr, dc)
     *)
-val get_simple_player : int -> t
+val create_simple_player : int -> t
 
 (** Assuming it's this player's turn, return the action it chooses to perform
     in the state within given game tree. It can also use the tree for planning

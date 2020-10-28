@@ -8,7 +8,7 @@ module GS = Game_state
 type t =
   | Simple of int (* # of look ahead *)
 
-let get_simple_player lookahead = Simple(lookahead)
+let create_simple_player lookahead = Simple(lookahead)
 ;;
 
 let take_turn (Simple(lookahead)) gt =
