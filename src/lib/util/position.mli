@@ -12,3 +12,6 @@ val create_positions_within : height:int -> width:int -> t list
 (** Compare 2 positions lexicalgraphically.
     ex: (0, 0), (1, 2) -> -1 *)
 val compare : t -> t -> int
+
+(** Convert a position to string, i.e., "(row, col)" *)
+val to_string : t -> string

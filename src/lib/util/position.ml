@@ -15,3 +15,6 @@ let compare (p1 : t) (p2 : t) =
   then Int.compare p1.col p2.col
   else p1_cmp
 ;;
+
+let to_string { row; col } =
+  Printf.sprintf "(%d, %d)" row col

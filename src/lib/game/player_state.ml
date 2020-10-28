@@ -7,6 +7,11 @@ module Player_color = struct
     | Black
     | White
   [@@deriving compare]
+  let to_string = function
+    | Red   -> "red"
+    | Brown -> "brown"
+    | Black -> "black"
+    | White -> "white"
 end
 
 type t =
