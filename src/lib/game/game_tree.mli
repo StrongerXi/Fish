@@ -4,7 +4,6 @@
       - subsequent game states and the actions to get there (lazily generated)
     NOTE that it's immutable *)
 type t
-module Player_color = Player_state.Player_color
 
 (** Create a game tree starting from the given state *)
 val create : Game_state.t -> t

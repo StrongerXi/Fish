@@ -12,7 +12,8 @@ let get_simple_player lookahead = Simple(lookahead)
 ;;
 
 let take_turn (Simple(lookahead)) gt =
-  let my_color = gt |> Game_tree.get_state |> GS.get_current_player |> PS.get_player_color in
+  let my_color =
+    gt |> Game_tree.get_state |> GS.get_current_player |> PS.get_player_color in
   let current_player_is_me (gt : Game_tree.t) : bool =
     let current_player = Game_tree.get_state gt |> GS.get_current_player in
     Core.phys_same my_color @@ PS.get_player_color current_player
@@ -45,14 +46,14 @@ let take_turn (Simple(lookahead)) gt =
   in
   let scored_act_compare (act1, score1) (act2, score2) : int =
     if score1 = score2
-    then act_compare act1 act2
+    then ~-(act_compare act1 act2) (* favor top-left move *)
     else Int.compare score1 score2
   in
   let best_scored_move =
     Game_tree.get_subtrees gt
     |> List.map ~f:(fun (act, subt) -> (act, evaluate_state (lookahead - 1) subt))
-    |> List.max_elt ~compare:scored_act_compare
-  in match best_scored_move with
+    |> List.max_elt ~compare:scored_act_compare in
+  match best_scored_move with
   | None -> failwith "No legal action in given game state"
   | Some(act, _) -> act
 ;;
