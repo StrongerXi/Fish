@@ -7,7 +7,7 @@ let board_tests = OUnit2.(>:::) "board_tests" [
 
     OUnit2.(>::) "test_construction" (fun _ ->
         let width, height = 3, 4 in
-        let holes = [{ Pos.row = 2; col = 2 }; { Pos.row = 1; col = 0 }] in
+        let holes = [{ Pos.row = 2; col = 2 }; { Pos.row = 0; col = 0 }] in
         let min_one_fish_tile = 3 in
         let dflt_fish = 5 in
         let conf =

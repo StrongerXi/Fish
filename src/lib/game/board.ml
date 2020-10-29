@@ -79,14 +79,13 @@ let create config =
   let default_tile = Tile.create dft_fish in
   let tiles = Array.make_matrix ~dimy:width ~dimx:height default_tile in
   holes |> List.iter
-    ~f:(fun {Position.row; col} -> tiles.(row).(col) <- Tile.hole);
+    ~f:(fun { Position.row; col } -> tiles.(row).(col) <- Tile.hole);
   Position.create_positions_within ~height ~width |> List.iter
-    ~f:(fun {Position.row; col} ->
+    ~f:(fun { Position.row; col } ->
         if (not @@ Tile.is_hole tiles.(row).(col)) &&
            !one_fish_tiles_left > 0
-        then
-          tiles.(row).(col) <- Tile.create 1;
-        one_fish_tiles_left := !one_fish_tiles_left - 1);
+        then (tiles.(row).(col) <- Tile.create 1;
+              one_fish_tiles_left := !one_fish_tiles_left - 1));
   { tiles }
 ;;
 
