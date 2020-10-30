@@ -1,3 +1,13 @@
+
+module Game_result : sig
+  type t =
+    { winners : Player.t list
+    ; cheaters : Player.t list
+    ; failed : Player.t list
+    ; rest : Player.t list
+    }
+end
+
 (** A [t] represents a referee which manages an entire fish game from start to
     end. A [t] manages exactly 1 game and becomes obselete after the game ends.
     It can:
