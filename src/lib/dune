@@ -2,7 +2,7 @@
   (name fish)
   ; these are the interface modules used to control accessibility
   (modules_without_implementation 
-   fish util game gui serialize
+   fish util common gui serialize
   )
   (libraries graphics extlib yojson core)
   (preprocess (pps ppx_let ppx_compare ppx_jane))

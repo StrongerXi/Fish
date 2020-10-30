@@ -1,6 +1,6 @@
-module P = Fish.Game.Player_state
-module PC = Fish.Game.Player_state.Player_color
-module PN = Fish.Game.Penguin
+module P = Fish.Common.Player_state
+module PC = Fish.Common.Player_state.Player_color
+module PN = Fish.Common.Penguin
 module Pos = Fish.Util.Position
 
 let tests = OUnit2.(>:::) "player_state_tests" [

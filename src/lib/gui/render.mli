@@ -1,2 +1,2 @@
 
-val render : Game.Game_state.t -> unit
+val render : Common.Game_state.t -> unit

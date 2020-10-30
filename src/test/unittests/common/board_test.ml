@@ -1,7 +1,7 @@
 module Pos = Fish.Util.Position
-module B = Fish.Game.Board
-module Conf = Fish.Game.Board.Config
-module T = Fish.Game.Tile
+module B = Fish.Common.Board
+module Conf = Fish.Common.Board.Config
+module T = Fish.Common.Tile
 
 let board_tests = OUnit2.(>:::) "board_tests" [
 

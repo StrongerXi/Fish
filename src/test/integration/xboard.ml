@@ -1,6 +1,6 @@
 open !Core
 module S = Fish.Serialize.Serialization
-module B = Fish.Game.Board
+module B = Fish.Common.Board
 
 (* deserialize a board-posn object from stdin, and output the # of reachable
  * positions starting from that position on the board *)

@@ -1,10 +1,10 @@
 open !Core
 module S = Fish.Serialize.Serialization
-module B = Fish.Game.Board
-module Action = Fish.Game.Action
-module Move = Fish.Game.Action.Move
-module Game_tree = Fish.Game.Game_tree
-module GS = Fish.Game.Game_state
+module B = Fish.Common.Board
+module Action = Fish.Common.Action
+module Move = Fish.Common.Action.Move
+module Game_tree = Fish.Common.Game_tree
+module GS = Fish.Common.Game_state
 module Pos = Fish.Util.Position
 
 let preference =

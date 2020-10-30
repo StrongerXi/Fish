@@ -1,5 +1,3 @@
-open Game
-
 (** A [t] represents a serialized object *)
 type t
 

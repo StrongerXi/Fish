@@ -1,9 +1,9 @@
 open !Core
 module S = Fish.Serialize.Serialization
-module B = Fish.Game.Board
-module GS = Fish.Game.Game_state
-module PS = Fish.Game.Player_state
-module PN = Fish.Game.Penguin
+module B = Fish.Common.Board
+module GS = Fish.Common.Game_state
+module PS = Fish.Common.Player_state
+module PN = Fish.Common.Penguin
 module Pos = Fish.Util.Position
 
 let preference =

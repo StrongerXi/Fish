@@ -1,4 +1,4 @@
-module T = Fish.Game.Tile
+module T = Fish.Common.Tile
 
 let tests = OUnit2.(>:::) "tile_tests" [
 

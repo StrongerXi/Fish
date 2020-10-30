@@ -1,11 +1,11 @@
-module GS = Fish.Game.Game_state
-module B = Fish.Game.Board
-module Conf = Fish.Game.Board.Config
-module Color = Fish.Game.Player_state.Player_color
+module GS = Fish.Common.Game_state
+module B = Fish.Common.Board
+module Conf = Fish.Common.Board.Config
+module Color = Fish.Common.Player_state.Player_color
 module Pos = Fish.Util.Position
-module PS = Fish.Game.Player_state
-module PN = Fish.Game.Penguin
-module T = Fish.Game.Tile
+module PS = Fish.Common.Player_state
+module PN = Fish.Common.Penguin
+module T = Fish.Common.Tile
 
 let tests = OUnit2.(>:::) "game_state_tests" [
 

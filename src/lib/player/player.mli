@@ -5,11 +5,12 @@
 type t
 
 (** Create an AI player with simplistic strategic planning.
-    - It always selects the first available position to place a penguin,
-    starting from (0, 0), and scanning each row from left to right
+    NOTE that it always respond on behalf of the current player in a game.
+    - It selects the first available position to place a penguin, starting
+      from (0, 0), and scanning each row from left to right
     - For turn taking, it always makes the move after looking ahead by given #
-    of turns with a minimax algorithm. It breaks tie by selecting the
-    lexicalgraphically smallest move, i.e., as if each move is (sr, sc, dr, dc)
+      of turns with a minimax algorithm. It breaks tie by selecting the
+      lexicalgraphically smallest move, as if each move is (sr, sc, dr, dc)
     *)
 val create_simple_player : int -> t
 

@@ -1,9 +1,9 @@
-module GS = Game.Game_state
-module BD = Game.Board
-module PC = Game.Player_state.Player_color
-module PS = Game.Player_state
-module Tile = Game.Tile
-module Penguin = Game.Penguin
+module GS = Common.Game_state
+module BD = Common.Board
+module PC = Common.Player_state.Player_color
+module PS = Common.Player_state
+module Tile = Common.Tile
+module Penguin = Common.Penguin
 module Pos = Util.Position
 
 module Constants = struct

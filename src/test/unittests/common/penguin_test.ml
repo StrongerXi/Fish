@@ -1,4 +1,4 @@
-module P = Fish.Game.Penguin
+module P = Fish.Common.Penguin
 module Pos = Fish.Util.Position
 
 let tests = OUnit2.(>:::) "penguin_tests" [
