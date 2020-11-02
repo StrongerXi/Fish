@@ -50,7 +50,7 @@ let generate_until_moveable_subtree t : unit =
       let next_color = GS.get_current_player next_gs |> PS.get_player_color in
       let next_t = { t with state = next_gs } in
       let%bind subtree =
-        if Core.phys_same next_color start_color
+        if Poly.(=) next_color start_color
         then None (* no player was able to move *)
         else generate_to_moveable_tree_until_start next_t in
       t.subtrees <- Some[(Action.Skip, subtree);];

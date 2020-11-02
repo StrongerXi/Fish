@@ -23,7 +23,7 @@ module Player_list = struct
 
   let get_player_with_color t color : Player_state.t option  = 
     List.find t.players
-      ~f:(fun p -> Core.phys_equal color (Player_state.get_player_color p))
+      ~f:(fun p -> Poly.(=) color (Player_state.get_player_color p))
   ;;
 
   let any_player_has_penguin_at t (pos : Position.t) : bool =
@@ -62,7 +62,7 @@ module Player_list = struct
       match players with
       | [] -> failwith "No player has given color"
       | p::players ->
-        if Core.phys_equal color @@ Player_state.get_player_color p
+        if Poly.(=) color @@ Player_state.get_player_color p
         then (Player_state.add_penguin p penguin)::players
         else p::(update_players players)
     in

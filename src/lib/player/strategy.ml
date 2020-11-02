@@ -52,7 +52,7 @@ module Turn_actor = struct
       gt |> GT.get_state |> GS.get_current_player |> PS.get_player_color in
     let current_player_is_me (gt : GT.t) : bool =
       let current_player = GT.get_state gt |> GS.get_current_player in
-      Core.phys_same my_color @@ PS.get_player_color current_player in
+      Poly.(=) my_color @@ PS.get_player_color current_player in
     let get_my_player_score (gt : GT.t) : int =
       PS.get_score @@ GS.get_player_with_color (GT.get_state gt) my_color in
     (* Evaluate [gt] from the perspective of player with [color], by looking
