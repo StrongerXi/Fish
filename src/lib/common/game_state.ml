@@ -7,15 +7,18 @@ module CQ = Util.Circular_queue
 module Player_list = struct
   (** A [t] represents state of all the players in a fish game.
       It's agnostic to the board (boundary, etc.)
+      It ensures: 
+      - all players have distinct colors
       NOTE that it's immutable *)
   type t =
     { players : Player_state.t list
     }
 
-  (** Create a [t] with 1 player for each of the given colors.
-      Assumes that elements of [colors] are distinct *)
+  (** Create a [t] with 1 player for each of the given colors. *)
   let create (colors : Player_color.t list) : t =
-    { players = List.map ~f:Player_state.create colors }
+    if List.contains_dup ~compare:Player_color.compare colors
+    then failwith "colors in a fish game must be unique"
+    else { players = List.map ~f:Player_state.create colors }
   ;;
 
   let get_player_with_color t color : Player_state.t option  = 
@@ -63,11 +66,17 @@ module Player_list = struct
         then (Player_state.add_penguin p penguin)::players
         else p::(update_players players)
     in
-    { players = update_players t.players }
+    if any_player_has_penguin_at t pos
+    then failwith "Cannot place penguin onto a tile occupied by another penguin"
+    else { players = update_players t.players }
   ;;
 
   (** Discouraged unless you have good reason and know what you are doing *)
-  let from_players (players : Player_state.t list) : t = { players }
+  let from_players (players : Player_state.t list) : (t, string) result = 
+    let colors = List.map ~f:Player_state.get_player_color players in
+    if List.contains_dup ~compare:Player_state.Player_color.compare colors
+    then Result.fail "Players must have distinct colors"
+    else Result.return { players }
 end
 
 module PL = Player_list
@@ -79,8 +88,6 @@ type t =
   }
 
 let create board colors = 
-  if List.contains_dup ~compare:Player_color.compare colors
-  then failwith "colors in a fish game must be unique";
   match colors with
   | [] -> failwith "There must be at least 1 player in a game"
   | start::nexts ->
@@ -141,9 +148,25 @@ let move_penguin t src dst =
 
 let from_board_players board players =
   match players with
-  | [] -> failwith "There must be at least 1 player in a game"
+  | [] -> Result.fail "There must be at least 1 player in a game"
   | start::nexts ->
-    let start = Player_state.get_player_color start
-    and nexts = List.map ~f:Player_state.get_player_color nexts in
-    { board; players = PL.from_players players; order = CQ.create start nexts }
+    let open Result.Let_syntax in
+    let%bind player_list = PL.from_players players in
+    let penguin_positions = 
+      List.concat_map ~f:Player_state.get_penguins players
+      |> List.map ~f:Penguin.get_position in
+    if List.contains_dup ~compare:Position.compare penguin_positions
+    then Result.fail "Each tile must have at most 1 penguin"
+    else
+    if List.exists ~f:(Fun.negate @@ Board.within_board board) penguin_positions
+    then Result.fail "All penguins must reside on tiles withint the board"
+    else
+    if List.map ~f:(Board.get_tile_at board) penguin_positions
+       |> List.exists ~f:Tile.is_hole
+    then Result.fail "No penguin should reside on a hole"
+    else
+    let start = Player_state.get_player_color start in
+    let nexts = List.map ~f:Player_state.get_player_color nexts in
+    let order = CQ.create start nexts in
+    return { board; players = player_list; order }
 ;;

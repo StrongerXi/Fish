@@ -9,28 +9,30 @@ type t = YB.t
 (* -------------------------------------------------------------- *)
 (* ----------------------- helper functions --------------------- *)
 (* -------------------------------------------------------------- *)
-let rec assoc_opt (kvs : ('a * 'b) list) (key : 'a) : 'b option =
+let rec assoc_res (kvs : (string * 'a) list) (key : string) : 
+  ('a, string) result =
   match kvs with
-  | (k, value)::_ when Stdlib.(=) k key -> Some(value)
-  | _::kvs -> assoc_opt kvs key
-  | _ -> None
+  | (k, value)::_ when String.equal k key -> Result.return value
+  | _::kvs -> assoc_res kvs key
+  | _ -> Result.fail @@ "key [" ^ key ^ "] not found"
 
 
 let from_pos (pos : Position.t) : t =
   `List([`Int(pos.row); `Int(pos.col)])
 
-let to_pos (t : t) : Position.t option =
+let to_pos (t : t) : (Position.t, string) result =
   match t with
-  | `List([`Int(row); `Int(col)]) -> Some({ Position.row; col })
-  | _ -> None
+  | `List([`Int(row); `Int(col)]) -> Result.return { Position.row; col }
+  | _ -> Result.fail "Position expects an array of 2 integers"
 ;;
 
 let from_tile (tile : Tile.t) : t = `Int(Tile.get_fish tile)
 
-let to_tile (t : t) : Tile.t option =
+let to_tile (t : t) : (Tile.t, string) result =
   match t with
-  | `Int(n) -> Some(if n = 0 then Tile.hole else Tile.create n)
-  | _ -> None
+  | `Int(n) when n >= 0 -> 
+    Result.return (if n = 0 then Tile.hole else Tile.create n)
+  | _ -> Result.fail "Tile expects a single non-negative integer"
 ;;
 
 let from_board (board : Board.t) : t =
@@ -44,25 +46,24 @@ let from_board (board : Board.t) : t =
   in
   `List(List.map ~f:(fun tile_ts -> `List(tile_ts)) tile_ts_2d)
 
-let to_board (t : t) : Board.t option =
-  let to_row t : Tile.t list option =
+let to_board (t : t) : (Board.t, string) result =
+  let to_row t : (Tile.t list, string) result =
     match t with
-    | `List(tile_ts) -> List.map ~f:to_tile tile_ts |> Option.all
-    | _ -> None
+    | `List(tile_ts) -> List.map ~f:to_tile tile_ts |> Result.all
+    | _ -> Result.fail "A row in board expects a list of tiles"
   in
   match t with
   | `List(rows) -> 
-    List.map ~f:to_row rows |> Option.all 
-    |> Option.map ~f:Board.from_tiles
-  | _ -> None
+    List.map ~f:to_row rows |> Result.all |> Result.bind ~f:Board.from_tiles
+  | _ -> Result.fail "A board expects a list of rows"
 
 ;;
 
 let from_penguin (penguin : Penguin.t) : t =
   from_pos @@ Penguin.get_position penguin
 
-let to_penguin (t : t) : Penguin.t option =
-  Option.map ~f:Penguin.create @@ to_pos t
+let to_penguin (t : t) : (Penguin.t, string) result =
+  Result.map ~f:Penguin.create @@ to_pos t
 ;;
 
 let from_color (color : Player_color.t) : t =
@@ -72,13 +73,19 @@ let from_color (color : Player_color.t) : t =
   | Black -> `String("black")
   | Brown -> `String("brown")
 
-let to_color t : Player_color.t option =
+let to_color t : (Player_color.t, string) result =
   match t with
-  | `String("red")   -> Some(Red)
-  | `String("white") -> Some(White)
-  | `String("black") -> Some(Black)
-  | `String("brown") -> Some(Brown)
-  | _ -> None
+  | `String("red")   -> Result.return Player_color.Red
+  | `String("white") -> Result.return Player_color.White
+  | `String("black") -> Result.return Player_color.Black
+  | `String("brown") -> Result.return Player_color.Brown
+  | _ -> Result.fail @@ "Unrecognized color: " ^ (YB.to_string t)
+;;
+
+let to_score t : (int, string) result =
+  match t with
+  | `Int(score) when score >= 0 -> Result.return score
+  | _ -> Result.fail "Score must be a non-negative integer"
 ;;
 
 let from_player (player : Player_state.t) : t =
@@ -88,35 +95,34 @@ let from_player (player : Player_state.t) : t =
   in
   `Assoc([("color", color_t); ("score", score_t); ("places", pengs_t);])
 
-let to_player (t : t) : Player_state.t option =
-  let open Option.Let_syntax in
+let to_player (t : t) : (Player_state.t, string) result =
+  let open Result.Let_syntax in
   match t with
   | `Assoc(kv_pairs) ->
     let%bind 
-      score_t = assoc_opt kv_pairs "score" and
-      color_t = assoc_opt kv_pairs "color" in
+      score_t = assoc_res kv_pairs "score" and
+      color_t = assoc_res kv_pairs "color" in
     begin
-      match%bind assoc_opt kv_pairs "places" with
+      match%bind assoc_res kv_pairs "places" with
       | `List(pengs_t) ->
-        let%bind 
-          pengs = List.map ~f:to_penguin pengs_t |> Option.all and 
-        score = YB.Util.to_int_option score_t and
-        color = to_color color_t in
+        let%bind pengs = List.map ~f:to_penguin pengs_t |> Result.all
+        and score = to_score score_t 
+        and color = to_color color_t in
         let player = Player_state.create color in
         let player = Player_state.set_score player score in
         let player = 
           List.fold_right ~init:player 
             ~f:(Fun.flip Player_state.add_penguin) pengs in
-        Some(player)
-      | _ -> None
+        return player
+      | _ -> Result.fail "Player expects a 'places' field"
     end
-  | _ -> None
+  | _ -> Result.fail "Player needs to be a json object"
 ;;
 
-let to_player_list (t : t) : Player_state.t list option =
+let to_player_list (t : t) : (Player_state.t list, string) result =
   match t with
-  | `List(player_ts) -> player_ts |> List.map ~f:to_player |> Option.all
-  | _ -> None
+  | `List(player_ts) -> player_ts |> List.map ~f:to_player |> Result.all
+  | _ -> Result.fail "Player list must be a list of players"
 ;;
 
 (* -------------------------------------------------------------- *)
@@ -135,17 +141,17 @@ let from_board_posn (board, pos) =
 ;;
 
 let to_board_posn (t : t) =
-  let open Option.Let_syntax in
+  let open Result.Let_syntax in
   match t with
   | `Assoc(kv_pairs) ->
     let%bind 
-      board_t = assoc_opt kv_pairs "board" and
-      pos_t = assoc_opt kv_pairs "position" in
+      board_t = assoc_res kv_pairs "board" and
+      pos_t = assoc_res kv_pairs "position" in
     let%bind 
       board = to_board board_t and 
       pos = to_pos pos_t in
-    Some(board, pos)
-  | _ -> None
+    return (board, pos)
+  | _ -> Result.fail "Board_Posn must be a json object"
 ;;
 
 let from_game_state gs = 
@@ -156,33 +162,33 @@ let from_game_state gs =
 ;;
 
 let to_game_state (t : t) =
-  let open Option.Let_syntax in
+  let open Result.Let_syntax in
   match t with
   | `Assoc(kv_pairs) -> 
     let%bind 
-      board_t = assoc_opt kv_pairs "board" and
-      players_t = assoc_opt kv_pairs "players" in
+      board_t = assoc_res kv_pairs "board" and
+      players_t = assoc_res kv_pairs "players" in
     let%bind 
       board = to_board board_t and
       players = to_player_list players_t in
-    Some(GS.from_board_players board players)
-  | _ -> None
+    GS.from_board_players board players
+  | _ -> Result.fail "Game state must be a json object"
 ;;
 
 let to_move_resp_query t =
-  let open Option.Let_syntax in
+  let open Result.Let_syntax in
   match t with
   | `Assoc(kv_pairs) ->
     let%bind 
-      state_t = assoc_opt kv_pairs "state" and
-      src_t = assoc_opt kv_pairs "from" and
-      dst_t = assoc_opt kv_pairs "to" in
+      state_t = assoc_res kv_pairs "state" and
+      src_t = assoc_res kv_pairs "from" and
+      dst_t = assoc_res kv_pairs "to" in
     let%bind 
       state = to_game_state state_t and
       src = to_pos src_t and
       dst = to_pos dst_t in
     return (state, src, dst)
-  | _ -> None
+  | _ -> Result.fail "Move_Response_Query must be a json object"
 
 let to_string (t : t) = YB.to_string t
 ;;

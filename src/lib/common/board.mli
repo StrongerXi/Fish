@@ -76,7 +76,6 @@ val get_reachable_from : t -> Position.t -> (Direction.t * Position.t list) list
 (** NOTE if [t] is immutable, this is just identity function *)
 val get_copy : t -> t
 
-(** Discouraged unless you have good reason and know what you are doing
-    width is determined by the longest row. Short rows will be filled with hole
-    tiles. *)
-val from_tiles : Tile.t list list -> t
+(** Width is determined by the longest row. Short rows will be filled with hole
+    tiles. Errors if width or height is 0. *)
+val from_tiles : Tile.t list list -> (t, string) result

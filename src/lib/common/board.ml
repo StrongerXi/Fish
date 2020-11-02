@@ -135,11 +135,14 @@ let get_copy t = { tiles = Array.map ~f:Array.copy t.tiles }
 
 let from_tiles tiles =
   let height = List.length tiles in
-  match List.map ~f:List.length tiles |> List.max_elt ~compare:Int.compare with
-  | None -> failwith "0 width means empty board"
-  | Some(width) ->
-    let arr = Array.make_matrix ~dimx:height ~dimy:width Tile.hole in
-    List.iteri tiles ~f:(fun row tiles ->
-        List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
-    { tiles = arr }
+  if height = 0 then Result.fail "There should be at least 1 row"
+  else
+    match List.map ~f:List.length tiles 
+          |> List.max_elt ~compare:Int.compare with
+    | None -> Result.fail "At least 1 row should be non-empty"
+    | Some(width) ->
+      let arr = Array.make_matrix ~dimx:height ~dimy:width Tile.hole in
+      List.iteri tiles ~f:(fun row tiles ->
+          List.iteri tiles ~f:(fun col tile -> arr.(row).(col) <- tile));
+      Result.return { tiles = arr }
 ;;

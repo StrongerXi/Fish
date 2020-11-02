@@ -10,8 +10,7 @@ module Player_color = Player_state.Player_color
       - what constitutes a "legal" move according to some set of tules
     It ensures:
       - all players have distinct colors, and there is at least 1 player.
-      - no penguin is on a hole
-      - each tile has at most 1 penguin
+      - all penguins reside on non-hole, within-board, and distinct tiles.
     NOTE that it's immutable *)
 type t
 
@@ -41,7 +40,8 @@ val rotate_to_next_player : t -> t
 (** Place a new penguin with given color at given position on the board.
     Errors if 
     - no the participating player has given color
-    - position is out of bound or is a hole *)
+    - position is out of bound or is a hole
+    - a penguin already exists at the position *)
 val place_penguin : t -> Player_color.t -> Position.t -> t
 
 (** Move the penguin at 1st position to the 2nd position, and update player
@@ -52,5 +52,6 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
     - a penguin already exists at the target position *)
 val move_penguin : t -> Position.t -> Position.t -> t
 
-(** Discouraged unless you have good reason and know what you are doing *)
-val from_board_players : Board.t -> Player_state.t list -> t
+(** Discouraged unless you have good reason and know what you are doing
+    Return error with a reason if any internal invariant is broken. *)
+val from_board_players : Board.t -> Player_state.t list -> (t, string) result
