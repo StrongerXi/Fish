@@ -40,12 +40,14 @@ let find_move_and_apply (gs : GS.t) : GS.t option =
     it to [find_move_and_apply]. If the result is [None], then print "false". *)
 let () =
   let input = Core.In_channel.input_all Core.In_channel.stdin in
-  match S.from_string input |> Option.bind ~f:S.to_game_state with
-  | Some(state) ->
+  let serialized = S.from_string input 
+                   |> Result.of_option ~error:"invalid serialization form" in
+  match Result.bind ~f:S.to_game_state serialized with
+  | Error(reason) -> Printf.printf "Invalid input, reason: %s\n" reason
+  | Ok(state) ->
     begin
       match find_move_and_apply state with
       | None -> print_string "false\n"
       | Some(state) -> 
         S.from_game_state state |> S.to_string |> Printf.printf "%s\n";
     end
-  | None -> print_string "Invalid input\n"

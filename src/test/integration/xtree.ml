@@ -57,9 +57,11 @@ let select_next_move_if_possible
     desired move isn't possible. *)
 let () =
   let input = Core.In_channel.input_all Core.In_channel.stdin in
-  match S.from_string input |> Option.bind ~f:S.to_move_resp_query with
-  | None -> print_string "Invalid input\n"
-  | Some(state, src, dst) ->
+  let serialized = S.from_string input 
+                   |> Result.of_option ~error:"invalid serialization form" in
+  match Result.bind ~f:S.to_move_resp_query serialized with
+  | Error(reason) -> Printf.printf "Invalid input, reason: %s\n" reason
+  | Ok(state, src, dst) ->
     match select_next_move_if_possible state src dst with
     | None  -> print_string "false\n"
     | Some(m) -> 

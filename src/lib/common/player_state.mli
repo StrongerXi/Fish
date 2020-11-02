@@ -2,8 +2,10 @@
     - color
     - score (non-negative)
     - all of its penguins
-    NOTE that it's immutable
-*)
+    NOTE 
+    - it's immutable
+    - [t] itself doesn't hold any invariants on its penguins. This is left to
+      more high level data representations. *)
 type t
 
 module Player_color : sig
