@@ -1,4 +1,5 @@
 open !Core
+module Strategy = Strategy
 open Strategy
 
 module PS = Player_state

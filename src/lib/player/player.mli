@@ -1,3 +1,7 @@
+(* This file serves both as an interface for the player, and package boundary
+ * for the player package. *)
+module Strategy = Strategy
+
 (** A [t] represents an external player in a fish game. It's "external" because
     it holds little information about a player's state in a fish game.
     It's responsible for actions from a player, either taking turns or
