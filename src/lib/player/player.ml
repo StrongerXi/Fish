@@ -14,13 +14,22 @@ let create_simple_player turns =
   AI(penguin_placer, turn_action)
 ;;
 
-let take_turn (AI(_, turn_actor)) gt =
-  Turn_actor.use turn_actor gt
+let assign_color t _ = 
+  match t with
+  | AI(_) -> t
 ;;
 
-let place_penguin (AI(penguin_placer, _)) gs =
-  Penguin_placer.use penguin_placer gs
+let take_turn t gt =
+  match t with
+  | AI(_, turn_actor) -> Turn_actor.use turn_actor gt
 ;;
 
-let inform_disqualified (AI _) = ()
+let place_penguin t gs =
+  match t with
+  | AI(penguin_placer, _) -> Penguin_placer.use penguin_placer gs
+;;
+
+let inform_disqualified t =
+  match t with
+  | AI(_) -> t
 ;;
