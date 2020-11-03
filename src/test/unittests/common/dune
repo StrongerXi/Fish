@@ -1,6 +1,6 @@
 (tests
   (names
    tile_test penguin_test player_state_test
-   board_test game_state_test)
+   board_test game_state_test game_tree_test)
   (libraries ounit2 fish)
 )
