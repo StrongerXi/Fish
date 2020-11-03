@@ -8,6 +8,84 @@ module PN = Fish.Common.Penguin
 module T = Fish.Common.Tile
 
 let tests = OUnit2.(>:::) "game_state_tests" [
+    OUnit2.(>::) "test_construction" (fun _ ->
+        let conf = Conf.create ~width:3 ~height:3
+                    |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [] in
+        let board = B.create conf in
+        let colors = [Color.Black; Color.Brown; Color.Red;] in
+        let state = GS.create board colors in
+        let players = List.map PS.create colors in
+
+        OUnit.assert_equal board @@ GS.get_board_copy state;
+        OUnit.assert_equal players @@ GS.get_ordered_players state;
+        OUnit.assert_equal (List.hd players) @@ GS.get_current_player state;
+
+       (* errors on invalid player colors *)
+        let expect = Failure "There must be at least 1 player in a game" in
+        OUnit2.assert_raises expect (fun () -> GS.create board []);
+        let expect = Failure "Colors in a fish game must be unique" in
+        OUnit2.assert_raises expect (fun () -> 
+            GS.create board [Color.Black; Color.Red; Color.Black;]);
+      );
+
+    OUnit2.(>::) "test_get_player_with_color" (fun _ ->
+        let conf = Conf.create ~width:3 ~height:3
+                    |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [] in
+        let board = B.create conf in
+        let colors = [Color.Black; Color.Brown; Color.Red;] in
+        let state = GS.create board colors in
+
+        List.iter (fun color -> OUnit.assert_equal 
+                      (PS.create color) 
+                      (GS.get_player_with_color state color)) colors;
+
+        (* errors on unregistered color *)
+        let expect = 
+          Failure "No player has specified color in this game state" in
+        OUnit2.assert_raises expect (fun () -> 
+            GS.get_player_with_color state PS.Player_color.White);
+      );
+
+    OUnit2.(>::) "test_rotate_players" (fun _ ->
+        let conf = Conf.create ~width:3 ~height:3
+                    |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [] in
+        let board = B.create conf in
+        let colors = [Color.Black; Color.Brown; Color.Red;] in
+        let state = (GS.create board colors) in
+
+        (* 2 rotations for all players *)
+        let state = 
+          List.fold_left
+            (fun gs color -> 
+               OUnit.assert_equal (PS.create color) @@ GS.get_current_player gs;
+               GS.rotate_to_next_player gs)
+            state colors 
+        in
+        let state = 
+          List.fold_left
+            (fun gs color -> 
+               OUnit.assert_equal (PS.create color) @@ GS.get_current_player gs;
+               GS.rotate_to_next_player gs)
+            state colors 
+        in
+
+        (* rotation shouldn't affect relative player order *)
+        let state = GS.rotate_to_next_player state in
+        let colors = [Color.Brown; Color.Red; Color.Black;] in
+       OUnit.assert_equal 
+         (List.map PS.create colors) @@ GS.get_ordered_players state;
+
+        (* Rotate with 1 single player *)
+       let state = GS.create board [PS.Player_color.White] in
+       OUnit.assert_equal 
+         (PS.create PS.Player_color.White) @@ GS.get_current_player state;
+       let state = GS.rotate_to_next_player state in
+       OUnit.assert_equal 
+         (PS.create PS.Player_color.White) @@ GS.get_current_player state;
+      );
 
     OUnit2.(>::) "test_place_penguin" (fun _ ->
         let hole_pos = { Pos.row = 2; col = 2 } in
@@ -47,13 +125,19 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let expect = Failure "Cannot place penguin onto a hole" in
         OUnit2.assert_raises expect (fun () -> 
             GS.place_penguin state0 Color.White hole_pos);
+        let expect = Failure 
+            "Cannot place penguin onto a tile occupied by another penguin" in
+        OUnit2.assert_raises expect (fun () -> 
+            GS.place_penguin state1 Color.White pos11);
       );
 
     OUnit2.(>::) "test_move_penguin" (fun _ ->
         (* Score and board should be updated.
          * Make sure game state "wires the 2 components up" *)
+        let hole_pos = { Pos.row = 0; col = 1 } in
         let board = Conf.create ~width:5 ~height:5
                     |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [hole_pos;]
                     |> B.create
         in
         let colors = [Color.Black; Color.Red;] in
@@ -84,10 +168,13 @@ let tests = OUnit2.(>:::) "game_state_tests" [
           (fun () -> GS.move_penguin state1 {Pos.row = 5; col = 1} pos12);
         let expect = Failure "Position is outside the board" in
         OUnit2.assert_raises expect 
-          (fun () -> GS.move_penguin state1 {Pos.row = 0; col = 6} pos11);
+          (fun () -> GS.move_penguin state0 pos11 {Pos.row = 0; col = 6});
         let expect = Failure "No penguin resides at source position" in
         OUnit2.assert_raises expect 
           (fun () -> GS.move_penguin state1 pos11 pos12);
+        let expect = Failure "Cannot move a penguin onto a hole" in
+        OUnit2.assert_raises expect 
+          (fun () -> GS.move_penguin state0 pos11 hole_pos);
         let expect = 
           Failure "Cannot move penguin to a tile occupied by another penguin" in
         let state2 = GS.place_penguin state1 Color.Black pos12 in

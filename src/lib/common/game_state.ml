@@ -17,7 +17,7 @@ module Player_list = struct
   (** Create a [t] with 1 player for each of the given colors. *)
   let create (colors : Player_color.t list) : t =
     if List.contains_dup ~compare:Player_color.compare colors
-    then failwith "colors in a fish game must be unique"
+    then failwith "Colors in a fish game must be unique"
     else { players = List.map ~f:Player_state.create colors }
   ;;
 
@@ -140,6 +140,8 @@ let place_penguin t color pos =
 ;;
 
 let move_penguin t src dst =
+  if Tile.is_hole @@ Board.get_tile_at t.board dst
+  then failwith "Cannot move a penguin onto a hole";
   let fish = Board.get_tile_at t.board src |> Tile.get_fish in
   let players = PL.move_penguin t.players src dst fish in
   let board = Board.remove_tile_at (Board.get_copy t.board) src in

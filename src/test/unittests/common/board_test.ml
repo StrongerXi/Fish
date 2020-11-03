@@ -45,6 +45,10 @@ let board_tests = OUnit2.(>:::) "board_tests" [
           (fun () -> B.create @@ Conf.set_width 0 conf);
         OUnit2.assert_raises expect 
           (fun () -> B.create @@ Conf.set_height 0 conf);
+        OUnit2.assert_raises expect 
+          (fun () -> B.create @@ Conf.set_width ~-2 conf);
+        OUnit2.assert_raises expect 
+          (fun () -> B.create @@ Conf.set_height ~-1 conf);
 
         (* within board *)
         OUnit.assert_equal true @@ B.within_board board { Pos.row = 3; col = 2 };

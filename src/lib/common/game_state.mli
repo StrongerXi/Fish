@@ -49,6 +49,7 @@ val place_penguin : t -> Player_color.t -> Position.t -> t
     Errors if 
     - any position is out of bound 
     - no penguin exists at source position
+    - target position is a hole
     - a penguin already exists at the target position *)
 val move_penguin : t -> Position.t -> Position.t -> t
 
