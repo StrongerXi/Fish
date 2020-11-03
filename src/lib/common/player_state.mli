@@ -15,10 +15,7 @@ module Player_color : sig
     | Brown
     | Black
     | White
-  [@@deriving compare]
-
-  (** Convert [t] to a readable string *)
-  val to_string : t -> string
+  [@@deriving show, compare, equal]
 end
 
 val create : Player_color.t -> t

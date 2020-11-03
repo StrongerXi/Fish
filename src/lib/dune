@@ -6,7 +6,7 @@
    referee
   )
   (libraries graphics extlib yojson core)
-  (preprocess (pps ppx_let ppx_compare ppx_jane))
+  (preprocess (pps ppx_deriving.show ppx_jane))
 )
 
 ; treat subdirectories as if they are at the same level

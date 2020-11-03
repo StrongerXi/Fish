@@ -19,7 +19,7 @@ let find_moves (moves : Move.t list) (dsts : Pos.t list) : Move.t list =
     match dsts with
     | [] -> []
     | d::dsts ->
-      match List.filter ~f:(fun m -> Poly.(=) d m.dst) moves with
+      match List.filter ~f:(fun m -> Pos.equal d m.dst) moves with
       | [] -> go dsts
       | moves -> moves
   in go dsts
@@ -41,8 +41,8 @@ let select_next_move_if_possible
     (state : GS.t) (src : Pos.t) (dst : Pos.t) : Move.t option =
   let open Option.Let_syntax in
   let subtrees = Game_tree.create state |> Game_tree.get_subtrees
-  and move = Action.Move({ src; dst }) in
-  let%bind subtree = List.Assoc.find ~equal:Poly.(=) subtrees move in
+  and act = Action.Move({ src; dst }) in
+  let%bind subtree = List.Assoc.find ~equal:Action.equal subtrees act in
   let moves = Game_tree.get_subtrees subtree 
               |> List.map ~f:(fun (move, _) -> move)
               |> get_moves_from_actions in

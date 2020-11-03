@@ -3,6 +3,7 @@
     - # of fish on it
     NOTE that it's immutable *)
 type t
+[@@deriving show]
 
 (** A tile that represents a hole *)
 val hole : t

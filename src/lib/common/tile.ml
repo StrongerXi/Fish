@@ -1,4 +1,5 @@
 type t = int
+[@@deriving show]
 
 let hole = 0
 ;;
