@@ -3,20 +3,39 @@ open !Core
 module PS = Player_state
 module GS = Game_state
 module GT = Game_tree
+module Dir = Board.Direction
 
 
 module Penguin_placer = struct
   type t =
     | Scanning
 
+  let rec leftmost_non_hole_pos_from (b : Board.t) (from : Position.t) :
+    Position.t option =
+    if not @@ Board.within_board b from then None
+    else if not @@ Tile.is_hole (Board.get_tile_at b from) then Some(from)
+    else 
+      let from_se = Dir.step_from from Dir.Southeast in
+      let from_right = Dir.step_from from_se Dir.Northeast in
+      leftmost_non_hole_pos_from b from_right
+  ;;
+
+  let rec topleft_most_non_hole_pos_from (b : Board.t) (from : Position.t)
+    : Position.t option =
+    if not @@ Board.within_board b from then None
+    else (* Check 2 rows each time, navigate via directions. *)
+      let row1_res = leftmost_non_hole_pos_from b from in
+      let row2_start = Dir.step_from from Dir.Southeast in
+      let row2_res = leftmost_non_hole_pos_from b row2_start in
+      match Option.first_some row1_res row2_res with
+      | None -> topleft_most_non_hole_pos_from b (Dir.step_from from Dir.South)
+      | res -> res
+  ;;
+
   let use_scanning (gs : GS.t) : Position.t =
-    let bd = GS.get_board_minus_penguins gs in
-    let width, height = Board.get_width bd, Board.get_height bd in
-    let best_pos = 
-      Position.create_positions_within ~width ~height
-      |> List.filter 
-        ~f:(fun p -> not @@ (Tile.is_hole @@ Board.get_tile_at bd p))
-      |> List.min_elt ~compare:Position.compare in (* favor top left pos *)
+    let board = GS.get_board_minus_penguins gs in
+    let top_left_pos = Board.get_top_left_pos board in
+    let best_pos = topleft_most_non_hole_pos_from board top_left_pos in
     match best_pos with
     | None -> failwith "No position to place penguin on board"
     | Some(pos) -> pos

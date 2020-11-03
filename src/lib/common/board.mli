@@ -53,8 +53,14 @@ end
     Error if any dimenson is non-positive. *)
 val create : Config.t -> t
 
+(** Return the number of columns. *)
 val get_width  : t -> int
+
+(** Return the number of rows. *)
 val get_height : t -> int
+
+(** Return the position of the top-left tile. *)
+val get_top_left_pos : t -> Position.t
 
 (** Whether the given position is within the board, i.e., a valid position  *)
 val within_board : t -> Position.t -> bool
