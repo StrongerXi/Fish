@@ -3,7 +3,7 @@ module Game_result : sig
     { winners : Player.t list
     ; cheaters : Player.t list
     ; failed : Player.t list
-    ; rest : Player.t list
+    ; rest : Player.t list (* ranked by scores from lower to higher *)
     }
 end
 
@@ -14,6 +14,7 @@ end
     - Report final result of a game after it's finished *)
 type t
 
+(* Some constants *)
 val min_num_of_players : int
 val max_num_of_players : int
 
