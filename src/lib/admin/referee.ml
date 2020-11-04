@@ -9,7 +9,9 @@ module Game_result = struct
     }
 end
 
-module Color = Player_state.Player_color
+module Color = Common.Player_state.Player_color
+module GT = Common.Game_tree
+module GS = Common.Game_state
 
 (** A [t] represents a referee which manages an entire fish game from start to
     end. A [t] manages exactly 1 game and becomes obselete after the game ends.
@@ -23,6 +25,8 @@ type t =
   ; mutable cheaters : Player.t list
   ; mutable failed : Player.t list
   }
+(* TODO how does client query current game or add observers state 
+   during a [run_game]? Need some synchronization mechanism *)
 
 
 let min_num_of_players = 2
@@ -37,39 +41,46 @@ let create players =
     color_to_player = List.cartesian_product colors players }
 ;;
 
+(** Errors if no player has [color] in [t].
+    This abstracts out the mapping from color to player. *)
+let find_player_with_color (t : t) (color : Color.t) : Player.t =
+  match List.Assoc.find ~equal:Color.equal t.color_to_player color with
+  | None -> failwith @@ "Color not found in referee: " ^ (Color.show color)
+  | Some(player) -> player
+
+(* Some mutually recursive helper functions to implement the game loop *)
+let rec game_loop (t : t) (tree : GT.t) : unit =
+  match GT.get_subtrees tree with
+  | [] -> () (* Game over *)
+  (* TODO inform skip event to observers *)
+  | [(Action.Skip, tree);] -> game_loop t tree
+  | subtrees -> 
+    let state = GT.get_state tree in
+    let color = GS.get_current_player state
+                |> Player_state.get_player_color in
+    let player = find_player_with_color t color in
+    (* TODO handle player unable_to_respond failure *)
+    let action = Player.take_turn player tree in
+    match List.Assoc.find ~equal:Action.equal subtrees action with
+    | None -> remove_current_player t tree
+    | Some(tree) -> game_loop t tree
+
+and remove_current_player (t : t) (tree : GT.t) : unit =
+  let state = GT.get_state tree in
+  let state = GS.remove_current_player state in
+  let next_state = GS.rotate_to_next_player state in
+  game_loop t @@ GT.create next_state
+;;
+
 let collect_result _ : Game_result.t =
   failwith "Unimplemented"
 ;;
 
-(* TODO how does client query current game state during a [run_game]?
-   Need some synchronization mechanism *)
-(* TODO break this up into smaller mutually recursive functions that take in 
-   [t] and [tree], e.g., [game_loop], [handle_cheater], etc. *)
 let run_game t config =
   let board = Board.create config in
   let colors = List.map ~f:Tuple.T2.get1 t.color_to_player in
-  let state = Game_state.create board colors in
-  let rec loop tree : unit =
-    match Game_tree.get_subtrees tree with
-    | [] -> ()
-    | [(Action.Skip, tree);] -> 
-      loop tree (* TODO inform skip event to observers *)
-    | subtrees -> 
-      let state = Game_tree.get_state tree in
-      let color = Game_state.get_current_player state
-                  |> Player_state.get_player_color in
-      let player = 
-        List.Assoc.find_exn ~equal:Color.equal t.color_to_player color in
-      (* TODO handle player unable_to_respond failure *)
-      let action = Player.take_turn player tree in
-      match List.Assoc.find ~equal:Action.equal subtrees action with
-      | None -> 
-        (* TODO remove player and add to cheater *)
-        let next_state = Game_state.rotate_to_next_player state in
-        loop @@ Game_tree.create next_state
-      | Some(tree) -> loop tree
-  in
+  let state = GS.create board colors in
   t.state <- (Some state);
-  loop @@ Game_tree.create state;
+  game_loop t (GT.create state);
   collect_result t
 ;;
