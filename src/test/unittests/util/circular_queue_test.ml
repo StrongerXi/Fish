@@ -31,6 +31,21 @@ let tests = OUnit2.(>:::) "circular_queue_tests" [
         OUnit.assert_equal [2; 1; 3;] @@ CQ.to_list int_cq;
         OUnit.assert_equal 2 @@ CQ.get_current int_cq;
       );
+
+    OUnit2.(>::) "test_remove_current" (fun _ ->
+        let int_cq = CQ.create 42 [] in
+        OUnit.assert_equal None @@ CQ.remove_current int_cq;
+
+        let int_cq213 = CQ.create 2 [1; 3;] in
+        let int_cq13 = CQ.remove_current int_cq213 in
+        OUnit.assert_equal 
+          (Some [1; 3;]) @@ (Option.map CQ.to_list int_cq13);
+        OUnit.assert_equal 
+          (Some 1) @@ (Option.map CQ.get_current int_cq13);
+        OUnit.assert_equal 
+          (Some [3; 1;]) 
+          (Option.map CQ.to_list (Option.map CQ.rotate int_cq13));
+      );
   ]
 
 let _ =
