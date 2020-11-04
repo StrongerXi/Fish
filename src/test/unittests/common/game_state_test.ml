@@ -48,6 +48,31 @@ let tests = OUnit2.(>:::) "game_state_tests" [
             GS.get_player_with_color state PS.Player_color.White);
       );
 
+    OUnit2.(>::) "test_remove_player_with_color" (fun _ ->
+        let conf = Conf.create ~width:3 ~height:3
+                    |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [] in
+        let board = B.create conf in
+        let colors = [Color.Black; Color.Brown; Color.Red;] in
+        let state = GS.create board colors in
+        let state = GS.place_penguin state Color.Red { Pos.row = 1; col = 1 } in
+        let state = GS.place_penguin state Color.Brown { Pos.row = 0; col = 2 } in
+        let players = GS.get_ordered_players state in
+
+        (* removing player has no effect on the board *)
+        let state = GS.remove_current_player state in
+        OUnit.assert_equal board @@ GS.get_board_copy state;
+        (* removing middle player doesn't affect the overall player order *)
+        OUnit.assert_equal (List.tl players) @@ GS.get_ordered_players state;
+
+        (* error on removing last player *)
+        let state = GS.remove_current_player state in
+        OUnit.assert_equal 
+          (players |> List.tl |> List.tl) (GS.get_ordered_players state);
+        let expect = Failure "Cannot remove the last player in a game state" in
+        OUnit2.assert_raises expect (fun () -> GS.remove_current_player state)
+      );
+
     OUnit2.(>::) "test_rotate_players" (fun _ ->
         let conf = Conf.create ~width:3 ~height:3
                     |> Conf.set_default_num_of_fish 3

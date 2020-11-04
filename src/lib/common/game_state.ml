@@ -1,6 +1,7 @@
 open !Core
 
 module Player_color = Player_state.Player_color
+module PS = Player_state
 module CQ = Util.Circular_queue
 
 (* For implementation convenience *)
@@ -11,24 +12,38 @@ module Player_list = struct
       - all players have distinct colors
       NOTE that it's immutable *)
   type t =
-    { players : Player_state.t list
+    { players : PS.t list
     }
 
   (** Create a [t] with 1 player for each of the given colors. *)
   let create (colors : Player_color.t list) : t =
     if List.contains_dup ~compare:Player_color.compare colors
     then failwith "Colors in a fish game must be unique"
-    else { players = List.map ~f:Player_state.create colors }
+    else { players = List.map ~f:PS.create colors }
   ;;
 
-  let get_player_with_color t color : Player_state.t option  = 
+  (** Return [None] if no player has [color] in [t] *)
+  let get_player_with_color t color : PS.t option  = 
     List.find t.players
-      ~f:(fun p -> Player_color.equal color (Player_state.get_player_color p))
+      ~f:(fun p -> Player_color.equal color (PS.get_player_color p))
+  ;;
+
+  (** Return [None] if no player has [color] in [t] *)
+  let remove_player_with_color t color : t option =
+    let rec remove_in_players players (checked : PS.t list) : PS.t list option =
+      match players with
+      | [] -> None
+      | p::players ->
+        if Player_color.equal color (PS.get_player_color p)
+        then Some(checked @ players)
+        else remove_in_players players (p::checked)
+    in
+    Option.map ~f:(fun players -> { players }) (remove_in_players t.players [])
   ;;
 
   let any_player_has_penguin_at t (pos : Position.t) : bool =
-    let player_has_penguin_at_pos (p : Player_state.t) : bool =
-      Player_state.get_penguins p 
+    let player_has_penguin_at_pos (p : PS.t) : bool =
+      PS.get_penguins p 
       |> List.map ~f:Penguin.get_position
       |> List.exists ~f:([%compare.equal: Position.t] pos)
     in
@@ -43,11 +58,11 @@ module Player_list = struct
       match players with
       | [] -> failwith "No penguin resides at source position"
       | p::players ->
-        match Player_state.move_penguin p src dst with
+        match PS.move_penguin p src dst with
         | None    -> p::(update_players players)
         | Some(p) ->
-          let new_score = fish + Player_state.get_score p in
-          (Player_state.set_score p new_score)::players
+          let new_score = fish + PS.get_score p in
+          (PS.set_score p new_score)::players
     in
     if any_player_has_penguin_at t dst
     then failwith "Cannot move penguin to a tile occupied by another penguin"
@@ -62,8 +77,8 @@ module Player_list = struct
       match players with
       | [] -> failwith "No player has given color"
       | p::players ->
-        if Player_color.equal color @@ Player_state.get_player_color p
-        then (Player_state.add_penguin p penguin)::players
+        if Player_color.equal color @@ PS.get_player_color p
+        then (PS.add_penguin p penguin)::players
         else p::(update_players players)
     in
     if any_player_has_penguin_at t pos
@@ -72,9 +87,9 @@ module Player_list = struct
   ;;
 
   (** Discouraged unless you have good reason and know what you are doing *)
-  let from_players (players : Player_state.t list) : (t, string) result = 
-    let colors = List.map ~f:Player_state.get_player_color players in
-    if List.contains_dup ~compare:Player_state.Player_color.compare colors
+  let from_players (players : PS.t list) : (t, string) result = 
+    let colors = List.map ~f:PS.get_player_color players in
+    if List.contains_dup ~compare:Player_color.compare colors
     then Result.fail "Players must have distinct colors"
     else Result.return { players }
 end
@@ -103,19 +118,29 @@ let get_ordered_players t =
     |> List.map ~f:(PL.get_player_with_color t.players)
     |> Option.all in
   match opt_players with
-  | None -> failwith "Inconsistency between colors in order and player_list"
+  | None -> failwith "Some color(s) are missing in player list"
   | Some(players) -> players
 ;;
 
 let get_current_player t = 
   match PL.get_player_with_color t.players @@ CQ.get_current t.order with
-  | None -> failwith "Inconsistency between colors in order and player_list"
+  | None -> failwith "Current player color is missing in player list"
   | Some(player) -> player
 ;;
 
 let rotate_to_next_player t = 
   { t with order = CQ.rotate t.order }
 ;;
+
+let remove_current_player t =
+  let current_color = CQ.get_current t.order in
+  match CQ.remove_current t.order with
+  | None -> failwith "Cannot remove the last player in a game state"
+  | Some(order) ->
+    match (PL.remove_player_with_color t.players current_color) with
+    | None -> failwith "Current color is missing in player list"
+    | Some(players) -> { t with players; order }
+  
 
 let get_player_with_color t color = 
   match PL.get_player_with_color t.players color with
@@ -125,8 +150,8 @@ let get_player_with_color t color =
 
 let get_board_minus_penguins t =
   let board = ref @@ Board.get_copy t.board in
-  let remove_penguin_tiles_of_player (p : Player_state.t) : unit =
-    Player_state.get_penguins p |> List.iter ~f:(fun pg -> 
+  let remove_penguin_tiles_of_player (p : PS.t) : unit =
+    PS.get_penguins p |> List.iter ~f:(fun pg -> 
         board := Board.remove_tile_at !board (Penguin.get_position pg))
   in
   get_ordered_players t |> List.iter ~f:remove_penguin_tiles_of_player;
@@ -155,7 +180,7 @@ let from_board_players board players =
     let open Result.Let_syntax in
     let%bind player_list = PL.from_players players in
     let penguin_positions = 
-      List.concat_map ~f:Player_state.get_penguins players
+      List.concat_map ~f:PS.get_penguins players
       |> List.map ~f:Penguin.get_position in
     if List.contains_dup ~compare:Position.compare penguin_positions
     then Result.fail "Each tile must have at most 1 penguin"
@@ -167,8 +192,8 @@ let from_board_players board players =
        |> List.exists ~f:Tile.is_hole
     then Result.fail "No penguin should reside on a hole"
     else
-    let start = Player_state.get_player_color start in
-    let nexts = List.map ~f:Player_state.get_player_color nexts in
+    let start = PS.get_player_color start in
+    let nexts = List.map ~f:PS.get_player_color nexts in
     let order = CQ.create start nexts in
     return { board; players = player_list; order }
 ;;
