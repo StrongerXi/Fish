@@ -63,7 +63,7 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
   match GT.get_subtrees tree with
   | [] -> () (* Game over *)
   (* TODO inform skip event to observers *)
-  | [(Action.Skip, tree);] -> game_loop t tree
+  | [(Action.Skip, next_sub_tree);] -> game_loop t next_sub_tree
   | subtrees -> 
     let state = GT.get_state tree in
     let color = PS.get_player_color @@ GS.get_current_player state in
@@ -71,9 +71,9 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
     match Player.take_turn player tree with
     | None -> handle_current_player_failed t state
     | Some(action) ->
-        match List.Assoc.find ~equal:Action.equal subtrees action with
-        | None -> handle_current_player_cheated t state
-        | Some(tree) -> game_loop t tree
+      match List.Assoc.find ~equal:Action.equal subtrees action with
+      | None -> handle_current_player_cheated t state
+      | Some(next_sub_tree) -> game_loop t next_sub_tree
 
 and handle_current_player_cheated (t : t) (state : GS.t)
   : unit =
@@ -96,10 +96,7 @@ let collect_result t : Game_result.t =
   match t.state with
   | None -> failwith "Game state must be available in [collect_result]"
   | Some(state) ->
-    let players = (* sorted from lower to higher score *)
-      List.sort (GS.get_ordered_players state)
-        ~compare:(fun p1 p2 -> Int.compare (PS.get_score p1) (PS.get_score p2))
-    in
+    let players = GS.get_ordered_players state in
     let max_score = Option.value_map ~default:0 ~f:PS.get_score @@ List.hd players in
     let winners = 
       List.filter ~f:(fun p -> (PS.get_score p) = max_score) players
@@ -107,6 +104,8 @@ let collect_result t : Game_result.t =
     in
     let rest = 
       List.filter ~f:(fun p -> (PS.get_score p) <> max_score) players
+      |> List.sort 
+        ~compare:(fun p1 p2 -> Int.compare (PS.get_score p1) (PS.get_score p2))
       |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
     in
     let cheaters = List.map ~f:(get_player_with_color t) t.cheaters in
