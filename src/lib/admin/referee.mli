@@ -19,12 +19,15 @@ val min_num_of_players : int
 val max_num_of_players : int
 
 (** Create a referee with given list of players.
-    Error if the # of players is invalid. *)
+    Error if 
+    - the # of players is outside the range specified in constants above. *)
 val create : Player.t list -> t
 
 (** Set up and run a game with the list of players given in [create].
     The turn order is determined by the player order in the original list. 
     The initial board is constructed based on given config.
     Each player gets (6 - N) penguins to place, where N is the # of players.
-    Error if we can't create a valid board or *)
+    Error if 
+    - we can't create a valid board based on given config.
+    - the board doesn't have enough non-hole tiles for penguin placement. *)
 val run_game : t -> Common.Board.Config.t -> Game_result.t
