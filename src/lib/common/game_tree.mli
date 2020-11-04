@@ -12,5 +12,8 @@ val get_state : t -> Game_state.t
 
 (** Return a list that associates each of the legal action from current player
     in the game state to the resulting state from that action. 
-    An empty list means this is a leaf node. *)
+    If current player cannot make a move, but some other player can, the only
+    action returned is [Skip], associated with a game state whose current player
+    is rotated to the next one.
+    Returning an empty list means no player can make a legal move anymore. *)
 val get_subtrees : t -> (Action.t * t) list
