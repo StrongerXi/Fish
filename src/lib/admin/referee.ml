@@ -12,6 +12,7 @@ end
 module Color = Common.Player_state.Player_color
 module GT = Common.Game_tree
 module GS = Common.Game_state
+module PS = Common.Player_state
 
 (** A [t] represents a referee which manages an entire fish game from start to
     end. A [t] manages exactly 1 game and becomes obselete after the game ends.
@@ -43,7 +44,7 @@ let create players =
 
 (** Errors if no player has [color] in [t].
     This abstracts out the mapping from color to player. *)
-let find_player_with_color (t : t) (color : Color.t) : Player.t =
+let get_player_with_color (t : t) (color : Color.t) : Player.t =
   match List.Assoc.find ~equal:Color.equal t.color_to_player color with
   | None -> failwith @@ "Color not found in referee: " ^ (Color.show color)
   | Some(player) -> player
@@ -58,7 +59,7 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
     let state = GT.get_state tree in
     let color = GS.get_current_player state
                 |> Player_state.get_player_color in
-    let player = find_player_with_color t color in
+    let player = get_player_with_color t color in
     (* TODO handle player unable_to_respond failure *)
     let action = Player.take_turn player tree in
     match List.Assoc.find ~equal:Action.equal subtrees action with
@@ -72,8 +73,24 @@ and remove_current_player (t : t) (tree : GT.t) : unit =
   game_loop t @@ GT.create next_state
 ;;
 
-let collect_result _ : Game_result.t =
-  failwith "Unimplemented"
+let collect_result t : Game_result.t =
+  match t.state with
+  | None -> failwith "Game state must be available in [collect_result]"
+  | Some(state) ->
+    let players = (* sorted from lower to higher score *)
+      List.sort (GS.get_ordered_players state)
+        ~compare:(fun p1 p2 -> Int.compare (PS.get_score p1) (PS.get_score p2))
+    in
+    let max_score = Option.value_map ~default:0 ~f:PS.get_score @@ List.hd players in
+    let winners = 
+      List.filter ~f:(fun p -> (PS.get_score p) = max_score) players
+      |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
+    in
+    let rest = 
+      List.filter ~f:(fun p -> (PS.get_score p) <> max_score) players
+      |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
+    in
+    { winners; rest; failed = t.failed; cheaters = t.cheaters }
 ;;
 
 let run_game t config =
