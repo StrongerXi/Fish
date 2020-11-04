@@ -23,8 +23,8 @@ type t =
     (* current game state, updated during [run_game] *)
   { mutable state : Game_state.t option
   ; mutable color_to_player : (Color.t * Player.t) list
-  ; mutable cheaters : Player.t list
-  ; mutable failed : Player.t list
+  ; mutable cheaters : Color.t list
+  ; mutable failed : Color.t list
   }
 (* TODO how does client query current game or add observers state 
    during a [run_game]? Need some synchronization mechanism *)
@@ -49,6 +49,15 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
   | None -> failwith @@ "Color not found in referee: " ^ (Color.show color)
   | Some(player) -> player
 
+(** Return [None] if no player is left after the removal *)
+let remove_current_player_opt (state : GS.t) : (GS.t * Color.t) option =
+  match GS.get_ordered_players state with
+  | [] -> None
+  | p::_ ->
+    let color_to_remove = PS.get_player_color p in
+    let state_after_removal = GS.remove_current_player state in
+    Some(state_after_removal, color_to_remove)
+
 (* Some mutually recursive helper functions to implement the game loop *)
 let rec game_loop (t : t) (tree : GT.t) : unit =
   match GT.get_subtrees tree with
@@ -57,20 +66,30 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
   | [(Action.Skip, tree);] -> game_loop t tree
   | subtrees -> 
     let state = GT.get_state tree in
-    let color = GS.get_current_player state
-                |> Player_state.get_player_color in
+    let color = PS.get_player_color @@ GS.get_current_player state in
     let player = get_player_with_color t color in
-    (* TODO handle player unable_to_respond failure *)
-    let action = Player.take_turn player tree in
-    match List.Assoc.find ~equal:Action.equal subtrees action with
-    | None -> remove_current_player t tree
-    | Some(tree) -> game_loop t tree
+    match Player.take_turn player tree with
+    | None -> handle_current_player_failed t state
+    | Some(action) ->
+        match List.Assoc.find ~equal:Action.equal subtrees action with
+        | None -> handle_current_player_cheated t state
+        | Some(tree) -> game_loop t tree
 
-and remove_current_player (t : t) (tree : GT.t) : unit =
-  let state = GT.get_state tree in
-  let state = GS.remove_current_player state in
-  let next_state = GS.rotate_to_next_player state in
-  game_loop t @@ GT.create next_state
+and handle_current_player_cheated (t : t) (state : GS.t)
+  : unit =
+  match remove_current_player_opt state with
+  | None -> () (* game is over, last player is removed *)
+  | Some(new_state, cheater_color) ->
+    t.cheaters <- cheater_color::t.cheaters;
+    game_loop t @@ GT.create new_state
+
+and handle_current_player_failed (t : t) (state : GS.t)
+  : unit =
+  match remove_current_player_opt state with
+  | None -> () (* game is over, last player is removed *)
+  | Some(new_state, failed_color) ->
+    t.failed <- failed_color::t.failed;
+    game_loop t @@ GT.create new_state
 ;;
 
 let collect_result t : Game_result.t =
@@ -90,7 +109,9 @@ let collect_result t : Game_result.t =
       List.filter ~f:(fun p -> (PS.get_score p) <> max_score) players
       |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
     in
-    { winners; rest; failed = t.failed; cheaters = t.cheaters }
+    let cheaters = List.map ~f:(get_player_with_color t) t.cheaters in
+    let failed = List.map ~f:(get_player_with_color t) t.failed in
+    { winners; rest; failed; cheaters; }
 ;;
 
 let run_game t config =

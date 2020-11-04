@@ -21,17 +21,19 @@ val create_simple_player : int -> t
 
 (** Assign given color to the given player.
     The player _may_ choose to ignore this information and play on behalf of
-    the current player in the game state/tree being passed to it *)
+    the current player in the game state/tree being passed to it. *)
 val assign_color : t -> Player_state.Player_color.t -> t
 
 (** Assuming it's this player's turn, return the action it chooses to perform
     in the state within given game tree. It can also use the tree for planning
-    purposes, and implicitly take advantage of subtree caching. *)
-val take_turn : t -> Game_tree.t -> Action.t
+    purposes, and implicitly take advantage of subtree caching.
+    Return [None] if there is a communication failure or player can't respond *)
+val take_turn : t -> Game_tree.t -> Action.t option
 
 (** Assuming the game is in the initial penguin placement phase, return the
-    position this player would like to place its next penguin *)
-val place_penguin : t -> Game_state.t -> Position.t
+    position this player would like to place its next penguin
+    Return [None] if there is a communication failure or player can't respond *)
+val place_penguin : t -> Game_state.t -> Position.t option
 
 (** Inform this player that it has been disqualified from a fish game 
     The player _may_ choose to ignore this event. *)

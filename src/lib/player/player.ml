@@ -21,12 +21,12 @@ let assign_color t _ =
 
 let take_turn t gt =
   match t with
-  | AI(_, turn_actor) -> Turn_actor.use turn_actor gt
+  | AI(_, turn_actor) -> Option.some @@ Turn_actor.use turn_actor gt
 ;;
 
 let place_penguin t gs =
   match t with
-  | AI(penguin_placer, _) -> Penguin_placer.use penguin_placer gs
+  | AI(penguin_placer, _) -> Option.some @@ Penguin_placer.use penguin_placer gs
 ;;
 
 let inform_disqualified t =
