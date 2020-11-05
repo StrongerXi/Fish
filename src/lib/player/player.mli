@@ -9,15 +9,9 @@ module Strategy = Strategy
     NOTE it's immutable *)
 type t
 
-(** Create an AI player with simplistic strategic planning.
-    NOTE that it always respond on behalf of the current player in a game.
-    - It selects the first available position to place a penguin, starting
-      from (0, 0), and scanning each row from left to right
-    - For turn taking, it always makes the move after looking ahead by given #
-      of turns with a minimax algorithm. It breaks tie by selecting the
-      lexicalgraphically smallest move, as if each move is (sr, sc, dr, dc)
-    *)
-val create_simple_player : int -> t
+(** Create an AI player who uses given strategies for decision making.
+    NOTE that it always respond on behalf of the current player in a game. *)
+val create_AI_player : Strategy.Penguin_placer.t -> Strategy.Turn_actor.t -> t
 
 (** Assign given color to the given player.
     The player _may_ choose to ignore this information and play on behalf of

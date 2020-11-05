@@ -8,10 +8,8 @@ module GS = Game_state
 type t =
   | AI of Penguin_placer.t * Turn_actor.t 
 
-let create_simple_player turns = 
-  let penguin_placer = Penguin_placer.create_scanning_strategy in
-  let turn_action = Turn_actor.create_minimax_strategy turns in
-  AI(penguin_placer, turn_action)
+let create_AI_player placer actor = 
+  AI(placer, actor)
 ;;
 
 let assign_color t _ = 
