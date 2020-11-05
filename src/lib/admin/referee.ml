@@ -16,6 +16,8 @@ module PS = Common.Player_state
 
 (** A [t] represents a referee which manages an entire fish game from start to
     end. A [t] manages exactly 1 game and becomes obselete after the game ends.
+    It's made mutable to enable client to do things such as query or add observers
+    during a [run_game] call.
     It can:
     - Set up and run a game given an ordered list of [Player.t]s
     - Report final result of a game after it's finished *)
@@ -51,32 +53,18 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
   | Some(player) -> player
 ;;
 
-(** Return [None] if no player is left after the removal *)
-let remove_current_player_opt (state : GS.t) : (GS.t * Color.t) option =
-  match GS.get_ordered_players state with
-  | [] -> None
-  | p::_ ->
-    let color_to_remove = PS.get_player_color p in
-    let state_after_removal = GS.remove_current_player state in
-    Some(state_after_removal, color_to_remove)
+let handle_current_player_cheated (t : t) : unit =
+  let state = Option.value_exn t.state in
+  let cheater_color = GS.get_current_player state |> PS.get_player_color in
+  t.state <- (GS.remove_current_player @@ Option.value_exn t.state);
+  t.cheaters <- cheater_color::t.cheaters;
 ;;
 
-let handle_current_player_cheated (t : t) (cont : GS.t -> unit)
-  : unit =
-  match remove_current_player_opt @@ Option.value_exn t.state with
-  | None -> t.state <- None; (* game is over, last player is removed *)
-  | Some(new_state, cheater_color) ->
-    t.cheaters <- cheater_color::t.cheaters;
-    cont new_state
-;;
-
-let handle_current_player_failed (t : t) (cont : GS.t -> 'a)
-  : 'a =
-  match remove_current_player_opt @@ Option.value_exn t.state with
-  | None -> t.state <- None; (* game is over, last player is removed *)
-  | Some(new_state, failed_color) ->
-    t.failed <- failed_color::t.failed;
-    cont new_state
+let handle_current_player_failed (t : t) : unit =
+  let state = Option.value_exn t.state in
+  let failed_color = GS.get_current_player state |> PS.get_player_color in
+  t.state <- (GS.remove_current_player @@ Option.value_exn t.state);
+  t.failed <- failed_color::t.cheaters;
 ;;
 
 let number_of_holes_on_board (board : Board.t) : int =
@@ -104,12 +92,12 @@ let handle_penguin_placement (t : t) (state : GS.t) : unit =
       let color = GS.get_current_player state |> PS.get_player_color in
       let player = get_player_with_color t color in
       match Player.place_penguin player state with
-      | None -> handle_current_player_failed t loop
+      | None -> handle_current_player_failed t
       | Some(pos) ->
         if Board.within_board board pos && 
            not @@ Tile.is_hole @@ Board.get_tile_at board pos
         then loop @@ GS.place_penguin state color pos
-        else handle_current_player_cheated t loop
+        else handle_current_player_cheated t
   in
   if penguins_per_player * num_of_players > (number_of_holes_on_board board)
   then failwith "Board doesn't have enough non-hole tiles for penguin placement"
@@ -128,20 +116,21 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
     let color = PS.get_player_color @@ GS.get_current_player state in
     let player = get_player_with_color t color in
     match Player.take_turn player tree with
-    | None -> handle_current_player_failed t
-                (fun new_state -> game_loop t @@ GT.create new_state);
+    | None -> 
+      handle_current_player_failed t;
+      Option.iter t.state ~f:(fun new_state -> game_loop t @@ GT.create new_state);
     | Some(action) ->
       match List.Assoc.find ~equal:Action.equal subtrees action with
-      | None -> handle_current_player_cheated t
-                  (fun new_state -> game_loop t @@ GT.create new_state);
+      | None -> 
+        handle_current_player_cheated t;
+        Option.iter t.state ~f:(fun new_state -> game_loop t @@ GT.create new_state);
       | Some(next_sub_tree) -> game_loop t next_sub_tree
 
 let collect_result t : Game_result.t =
   let cheaters = List.map ~f:(get_player_with_color t) t.cheaters in
   let failed = List.map ~f:(get_player_with_color t) t.failed in
   match t.state with
-  | None -> 
-    { winners = []; rest = []; failed; cheaters }
+  | None -> { winners = []; rest = []; failed; cheaters }
   | Some(state) ->
     let players = GS.get_ordered_players state in
     let max_score = Option.value_map ~default:0 ~f:PS.get_score @@ List.hd players in

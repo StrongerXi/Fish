@@ -134,12 +134,10 @@ let rotate_to_next_player t =
 
 let remove_current_player t =
   let current_color = CQ.get_current t.order in
-  match CQ.remove_current t.order with
-  | None -> failwith "Cannot remove the last player in a game state"
-  | Some(order) ->
-    match (PL.remove_player_with_color t.players current_color) with
-    | None -> failwith "Current color is missing in player list"
-    | Some(players) -> { t with players; order }
+  let open Option.Let_syntax in
+  let%bind order = CQ.remove_current t.order in
+  let%bind players = PL.remove_player_with_color t.players current_color in
+  return { t with players; order }
   
 
 let get_player_with_color t color = 

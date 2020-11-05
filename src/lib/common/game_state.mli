@@ -38,8 +38,8 @@ val get_current_player : t -> Player_state.t
 val rotate_to_next_player : t -> t
 
 (** Remove the current player in this state, and leave the board unaffected.
-    Errors if the state has no player left after removal. *)
-val remove_current_player : t -> t
+    Return [None] if the state has no player left after removal. *)
+val remove_current_player : t -> t option
 
 (** Place a new penguin with given color at given position on the board.
     Errors if 
