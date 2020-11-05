@@ -31,5 +31,5 @@ let place_penguin t gs =
 
 let inform_disqualified t =
   match t with
-  | AI(_) -> t
+  | AI(_) -> ()
 ;;

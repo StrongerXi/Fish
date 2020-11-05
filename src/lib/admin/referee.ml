@@ -35,14 +35,14 @@ type t =
 
 let min_num_of_players = 2
 let max_num_of_players = 4
-let colors = [Color.Red; Color.Black; Color.White; Color.Brown;]
+let init_colors = [Color.Red; Color.Black; Color.White; Color.Brown;]
 
 let create players =
   let player_count = List.length players in
   if player_count < min_num_of_players || player_count > max_num_of_players
   then failwith ("Invalid number of players: " ^ (string_of_int player_count));
   { state = None; cheaters = []; failed = []; 
-    color_to_player = List.cartesian_product colors players }
+    color_to_player = List.cartesian_product init_colors players }
 ;;
 
 (** Errors if no player has [color] in [t].
@@ -53,18 +53,26 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
   | Some(player) -> player
 ;;
 
-let handle_current_player_cheated (t : t) : unit =
+(** Assumes [t.state] is populated. Update [t.cheaters] accordingly
+    Return the new game state, or [None] if all players are removed. *)
+let handle_current_player_cheated (t : t) : GS.t option =
   let state = Option.value_exn t.state in
   let cheater_color = GS.get_current_player state |> PS.get_player_color in
-  t.state <- (GS.remove_current_player @@ Option.value_exn t.state);
+  let player = get_player_with_color t cheater_color in
+  Player.inform_disqualified player;
   t.cheaters <- cheater_color::t.cheaters;
+  GS.remove_current_player @@ Option.value_exn t.state;
 ;;
 
-let handle_current_player_failed (t : t) : unit =
+(** Assumes [t.state] is populated. Update [t.failed] accordingly.
+    Return the new game state, or [None] if all players are removed. *)
+let handle_current_player_failed (t : t) : GS.t option =
   let state = Option.value_exn t.state in
   let failed_color = GS.get_current_player state |> PS.get_player_color in
-  t.state <- (GS.remove_current_player @@ Option.value_exn t.state);
+  let player = get_player_with_color t failed_color in
+  Player.inform_disqualified player;
   t.failed <- failed_color::t.cheaters;
+  GS.remove_current_player @@ Option.value_exn t.state;
 ;;
 
 let number_of_holes_on_board (board : Board.t) : int =
@@ -84,24 +92,26 @@ let handle_penguin_placement (t : t) (state : GS.t) : unit =
     List.map ~f:PS.get_penguins @@ GS.get_ordered_players state |> 
     List.for_all ~f:(fun penguins -> penguins_per_player = (List.length penguins))
   in
-  (* Update the state in [t] in each iteration. *)
   let rec loop state : unit =
     t.state <- Some(state);
-    if not @@ all_players_have_enough_penguins state
-    then
-      let color = GS.get_current_player state |> PS.get_player_color in
-      let player = get_player_with_color t color in
-      match Player.place_penguin player state with
-      | None -> handle_current_player_failed t
-      | Some(pos) ->
-        if Board.within_board board pos && 
-           not @@ Tile.is_hole @@ Board.get_tile_at board pos
-        then loop @@ GS.place_penguin state color pos
-        else handle_current_player_cheated t
+    if all_players_have_enough_penguins state then ();
+    let player_state = GS.get_current_player state in
+    if penguins_per_player = List.length @@ PS.get_penguins player_state 
+    then loop @@ GS.rotate_to_next_player state; (* skip saturated player *)
+    let color = PS.get_player_color player_state in
+    let player = get_player_with_color t color in
+    match Player.place_penguin player state with
+    | None -> Option.iter ~f:loop @@ handle_current_player_failed t;
+    | Some(pos) ->
+      if Board.within_board board pos && 
+         not @@ Tile.is_hole @@ Board.get_tile_at board pos
+      then loop @@ GS.place_penguin state color pos
+      else Option.iter ~f:loop @@ handle_current_player_failed t;
   in
   if penguins_per_player * num_of_players > (number_of_holes_on_board board)
   then failwith "Board doesn't have enough non-hole tiles for penguin placement"
   else loop state
+;;
 
 (* Some mutually recursive helper functions to implement the game loop.
    Update the state in [t] in each iteration. *)
@@ -116,15 +126,14 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
     let color = PS.get_player_color @@ GS.get_current_player state in
     let player = get_player_with_color t color in
     match Player.take_turn player tree with
-    | None -> 
-      handle_current_player_failed t;
-      Option.iter t.state ~f:(fun new_state -> game_loop t @@ GT.create new_state);
+    | None -> Option.iter (handle_current_player_failed t)
+                ~f:(fun new_state -> game_loop t @@ GT.create new_state)
     | Some(action) ->
       match List.Assoc.find ~equal:Action.equal subtrees action with
-      | None -> 
-        handle_current_player_cheated t;
-        Option.iter t.state ~f:(fun new_state -> game_loop t @@ GT.create new_state);
+      | None -> Option.iter (handle_current_player_cheated t)
+                  ~f:(fun new_state -> game_loop t @@ GT.create new_state)
       | Some(next_sub_tree) -> game_loop t next_sub_tree
+;;
 
 let collect_result t : Game_result.t =
   let cheaters = List.map ~f:(get_player_with_color t) t.cheaters in

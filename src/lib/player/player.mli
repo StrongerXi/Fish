@@ -37,4 +37,4 @@ val place_penguin : t -> Game_state.t -> Position.t option
 
 (** Inform this player that it has been disqualified from a fish game 
     The player _may_ choose to ignore this event. *)
-val inform_disqualified : t -> t
+val inform_disqualified : t -> unit
