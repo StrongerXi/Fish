@@ -3,7 +3,7 @@ module Game_result : sig
     { winners : Player.t list
     ; cheaters : Player.t list
     ; failed : Player.t list
-    ; rest : Player.t list (* ranked by scores from lower to higher *)
+    ; rest : Player.t list
     }
 end
 
