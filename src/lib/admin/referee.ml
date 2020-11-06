@@ -9,6 +9,16 @@ module Game_result = struct
     }
 end
 
+module Game_observer = struct
+  type event =
+    | Register of Game_state.t
+    | PenguinPlacement of Position.t
+    | TurnAction of Action.t
+    | Disqualify of Player_state.Player_color.t
+    | EndOfGame of Game_result.t
+  type t = event -> unit
+end
+
 module Color = Common.Player_state.Player_color
 module GT = Common.Game_tree
 module GS = Common.Game_state
@@ -28,10 +38,10 @@ type t =
   ; mutable color_to_player : (Color.t * Player.t) list
   ; mutable cheaters : Color.t list
   ; mutable failed : Color.t list
+  ; mutable observers : Game_observer.t list
+  (* Note that synchronization is not added yet since there doesn't seem to be
+   * any data race condition *)
   }
-(* TODO how does client query current game or add observers state 
-   during a [run_game]? Need some synchronization mechanism *)
-
 
 let min_num_of_players = 2
 let max_num_of_players = 4
@@ -41,8 +51,17 @@ let create players =
   let player_count = List.length players in
   if player_count < min_num_of_players || player_count > max_num_of_players
   then failwith ("Invalid number of players: " ^ (string_of_int player_count));
-  { state = None; cheaters = []; failed = []; 
+  { state = None; cheaters = []; failed = []; observers = [];
     color_to_player = List.cartesian_product init_colors players }
+;;
+
+let add_game_observer t observer =
+  t.observers <- observer::t.observers;
+  Option.iter t.state ~f:(fun state -> observer (Game_observer.Register state))
+;;
+
+let inform_all_observers t event =
+  List.iter ~f:(fun observer -> observer event) t.observers
 ;;
 
 (** Errors if no player has [color] in [t].
@@ -53,26 +72,30 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
   | Some(player) -> player
 ;;
 
-(** Assumes [t.state] is populated. Update [t.cheaters] accordingly
+(** Update [t.cheaters] accordingly, no effect if [t.state] is empty.
     Return the new game state, or [None] if all players are removed. *)
 let handle_current_player_cheated (t : t) : GS.t option =
-  let state = Option.value_exn t.state in
-  let cheater_color = GS.get_current_player state |> PS.get_player_color in
-  let player = get_player_with_color t cheater_color in
-  Player.inform_disqualified player;
-  t.cheaters <- cheater_color::t.cheaters;
-  GS.remove_current_player @@ Option.value_exn t.state;
+  Option.bind t.state
+    ~f:(fun state ->
+        let cheater_color = GS.get_current_player state |> PS.get_player_color in
+        let player = get_player_with_color t cheater_color in
+        Player.inform_disqualified player;
+        t.cheaters <- cheater_color::t.cheaters;
+        inform_all_observers t (Game_observer.Disqualify cheater_color);
+        GS.remove_current_player state)
 ;;
 
-(** Assumes [t.state] is populated. Update [t.failed] accordingly.
+(** Update [t.failed] accordingly, no effect if [t.state] is empty.
     Return the new game state, or [None] if all players are removed. *)
 let handle_current_player_failed (t : t) : GS.t option =
-  let state = Option.value_exn t.state in
-  let failed_color = GS.get_current_player state |> PS.get_player_color in
-  let player = get_player_with_color t failed_color in
-  Player.inform_disqualified player;
-  t.failed <- failed_color::t.cheaters;
-  GS.remove_current_player @@ Option.value_exn t.state;
+  Option.bind t.state
+    ~f:(fun state ->
+        let failed_color = GS.get_current_player state |> PS.get_player_color in
+        let player = get_player_with_color t failed_color in
+        Player.inform_disqualified player;
+        t.failed <- failed_color::t.failed;
+        inform_all_observers t (Game_observer.Disqualify failed_color);
+        GS.remove_current_player state)
 ;;
 
 let number_of_holes_on_board (board : Board.t) : int =
@@ -96,7 +119,9 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   | Some(pos) ->
     if Board.within_board board pos && 
        not @@ Tile.is_hole @@ Board.get_tile_at board pos
-    then Option.some @@ GS.place_penguin gs color pos
+    then 
+      (inform_all_observers t (Game_observer.PenguinPlacement pos);
+       Option.some @@ GS.place_penguin gs color pos)
     else handle_current_player_failed t
 ;;
 
@@ -135,7 +160,9 @@ let handle_current_player_turn_action
     | Some(action) ->
       match List.Assoc.find ~equal:Action.equal subtrees action with
       | None -> Option.map ~f:GT.create @@ handle_current_player_cheated t
-      | Some(next_sub_tree) -> Option.some next_sub_tree
+      | Some(next_sub_tree) -> 
+        (inform_all_observers t (Game_observer.TurnAction action);
+         Option.some next_sub_tree)
 ;;
 
 (* Some mutually recursive helper functions to implement the game loop.
@@ -144,8 +171,9 @@ let rec game_loop (t : t) (tree : GT.t) : unit =
   t.state <- Some(GT.get_state tree);
   match GT.get_subtrees tree with
   | [] -> () (* Game over *)
-  (* TODO inform skip event to observers *)
-  | [(Action.Skip, next_sub_tree);] -> game_loop t next_sub_tree
+  | [(Action.Skip, next_sub_tree);] -> 
+    inform_all_observers t (Game_observer.TurnAction Action.Skip);
+    game_loop t next_sub_tree
   | subtrees -> 
     Option.iter ~f:(game_loop t)
       @@ handle_current_player_turn_action t tree subtrees
@@ -174,9 +202,12 @@ let run_game t config =
   let board = Board.create config in
   let colors = List.map ~f:Tuple.T2.get1 t.color_to_player in
   let state = GS.create board colors in
+  inform_all_observers t (Game_observer.Register state);
   handle_penguin_placement_phase t state;
   (match t.state with
    | None -> (); (* all players failed/cheated during placement phase *)
    | Some(state) -> game_loop t (GT.create state));
-  collect_result t
+  let result = collect_result t in
+  inform_all_observers t (Game_observer.EndOfGame result);
+  result
 ;;
