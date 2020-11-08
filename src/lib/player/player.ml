@@ -14,7 +14,7 @@ let create_AI_player placer actor =
 
 let assign_color t _ = 
   match t with
-  | AI(_) -> t
+  | AI(_) -> ()
 ;;
 
 let take_turn t gt =

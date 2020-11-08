@@ -116,6 +116,12 @@ let remove_tile_at t ({ Position.row; col } as pos) =
   t
 ;;
 
+let num_of_non_hole_tiles t =
+  let width, height = get_width t, get_height t in 
+  Position.create_positions_within ~width ~height
+  |> List.filter ~f:(fun pos -> not @@ Tile.is_hole @@ get_tile_at t pos)
+  |> List.length
+;;
 
 let get_reachable_from t src =
   (* From (row, col), attempt to add AMAP position to `acc` following `dir`
