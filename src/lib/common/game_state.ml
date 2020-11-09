@@ -28,17 +28,17 @@ module Player_list = struct
       ~f:(fun p -> Player_color.equal color (PS.get_player_color p))
   ;;
 
-  (** Return [None] if no player has [color] in [t] *)
-  let remove_player_with_color t color : t option =
-    let rec remove_in_players players (checked : PS.t list) : PS.t list option =
+  (** ERROR: if no player has [color] in [t] *)
+  let remove_player_with_color_exn t color : t =
+    let rec remove_in_players players (checked : PS.t list) : PS.t list =
       match players with
-      | [] -> None
+      | [] -> failwith "No player has given color in the player list"
       | p::players ->
         if Player_color.equal color (PS.get_player_color p)
-        then Some(checked @ players)
+        then checked @ players
         else remove_in_players players (p::checked)
     in
-    Option.map ~f:(fun players -> { players }) (remove_in_players t.players [])
+    { players = (remove_in_players t.players []) }
   ;;
 
   let any_player_has_penguin_at t (pos : Position.t) : bool =
@@ -136,7 +136,7 @@ let remove_current_player t =
   let current_color = CQ.get_current t.order in
   let open Option.Let_syntax in
   let%bind order = CQ.remove_current t.order in
-  let%bind players = PL.remove_player_with_color t.players current_color in
+  let players = PL.remove_player_with_color_exn t.players current_color in
   return { t with players; order }
   
 
