@@ -72,7 +72,7 @@ let timeout (f : unit -> 'a) (sec : int) : 'a option =
 (** EFFECT: update [t.observers] *)
 let add_game_observer t observer =
   t.observers <- observer::t.observers;
-  Option.iter t.state ~f:(fun state -> observer (Game_observer.Register state))
+  Option.iter t.state ~f:(fun state -> observer (Register state))
 ;;
 
 (** EFFECT: update [t.observers] to remove the observer(s) which time out *)
@@ -106,12 +106,12 @@ let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
         let color = GS.get_current_player state |> PS.get_player_color in
         let player = get_player_with_color t color in
         Core.ignore @@ timeout 
-          (fun () -> Player.inform_disqualified player) 
+          (fun () -> player#inform_disqualified ()) 
           C.inform_disqualified_timeout_s;
         (match why with
          | `Cheat -> t.cheaters <- color::t.cheaters
          | `Fail  -> t.failed   <- color::t.failed);
-        inform_all_observers t (Game_observer.Disqualify color);
+        inform_all_observers t (Disqualify color);
         GS.remove_current_player state)
 ;;
 
@@ -131,95 +131,108 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let color = PS.get_player_color player_state in
   let player = get_player_with_color t color in
   let response = Option.join @@
-    timeout (fun () -> Player.place_penguin player gs) C.placement_timeout_s in
+    timeout (fun () -> player#place_penguin gs) C.placement_timeout_s in
   match response with (* same treatment to timeout and communication failure *) 
   | None -> handle_current_player_failed t
   | Some(pos) ->
     if Board.within_board board pos && 
        not @@ Tile.is_hole @@ Board.get_tile_at board pos
     then 
-      (inform_all_observers t (Game_observer.PenguinPlacement pos);
-       Option.some @@ GS.place_penguin gs color pos)
+      (inform_all_observers t (PenguinPlacement pos);
+       Option.some @@ GS.rotate_to_next_player @@ GS.place_penguin gs color pos)
     else handle_current_player_failed t
 ;;
 
-(** EFFECT: upadte [t.state], [t.cheaters] and [t.failed].
-    RETURN: final game tree or [None] if all players are removed. *)
-let handle_penguin_placement_phase (t : t) (state : GS.t) : GS.t option =
-  let penguins_per_player = num_of_penguin_per_player state in
+(** EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
+let handle_penguin_placement_phase (t : t) : unit =
+  let penguins_per_player = 
+    Option.value_map t.state ~default:0 ~f:num_of_penguin_per_player in
   let all_players_have_enough_penguins state : bool =
     List.map ~f:PS.get_penguins @@ GS.get_ordered_players state
-    |> List.for_all 
-      ~f:(fun penguins -> penguins_per_player = (List.length penguins))
+    |> List.for_all ~f:(fun pgs -> penguins_per_player = (List.length pgs))
   in
-  let rec loop state : GS.t option =
-    t.state <- Some(state);
-    if all_players_have_enough_penguins state then t.state
+  let get_next_state (state : GS.t) : GS.t option =
+    if all_players_have_enough_penguins state then None
     else
       let player_state = GS.get_current_player state in
-      if penguins_per_player = List.length @@ PS.get_penguins player_state 
-      then loop @@ GS.rotate_to_next_player state (* skip saturated player *)
-      else Option.bind ~f:loop (handle_current_player_penguin_placement t state)
+      if penguins_per_player = List.length @@ PS.get_penguins player_state
+      then Option.some @@ GS.rotate_to_next_player state
+      else handle_current_player_penguin_placement t state
   in
-  loop state
+  (* A loop mainly responsible for updating [t.state] *)
+  let rec loop (state : GS.t) : unit =
+    match get_next_state state with
+    | None -> ()
+    | Some(next_state) -> 
+      t.state <- Some(next_state);
+      loop next_state
+  in
+  Option.iter ~f:loop t.state;
 ;;
 
 (** EFFECT: update [t.cheaters] or [t.failed] if current player cheats/fails.
     RETURN: final game tree or [None] if all players are removed. *)
-let handle_current_player_turn_action 
-    (t : t) (tree : GT.t) (subtrees : (Action.t * GT.t) list) : GT.t option =
+let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
+  let subtrees = GT.get_subtrees tree in
   let state = GT.get_state tree in
   let color = PS.get_player_color @@ GS.get_current_player state in
   let player = get_player_with_color t color in
   let response = Option.join @@
-    timeout (fun () -> Player.take_turn player tree) C.turn_action_timeout_s in
+    timeout (fun () -> player#take_turn tree) C.turn_action_timeout_s in
   match response with (* same treatment for timeout and communication failure *) 
   | None -> Option.map ~f:GT.create @@ handle_current_player_failed t
   | Some(action) ->
     match List.Assoc.find ~equal:Action.equal subtrees action with
     | None -> Option.map ~f:GT.create @@ handle_current_player_cheated t
     | Some(next_sub_tree) -> 
-      (inform_all_observers t (Game_observer.TurnAction action);
+      (inform_all_observers t (TurnAction action);
        Option.some next_sub_tree)
 ;;
 
-(* EFFECT: upadte [t.state], [t.cheaters] and [t.failed].
-   RETURN: final game tree or [None] if all players are removed. *)
-let rec handle_turn_action_phase (t : t) (tree : GT.t) : GT.t option =
-  t.state <- Some(GT.get_state tree);
-  match GT.get_subtrees tree with
-  | [] -> Option.return tree (* Game over *)
-  | [(Action.Skip, next_sub_tree);] -> 
-    inform_all_observers t (Game_observer.TurnAction Action.Skip);
-    handle_turn_action_phase t next_sub_tree
-  | subtrees -> 
-    Option.bind ~f:(handle_turn_action_phase t)
-    @@ handle_current_player_turn_action t tree subtrees
+(* EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
+let handle_turn_action_phase (t : t) : unit =
+  let get_next_subtree (tree : GT.t) : GT.t option =
+    match GT.get_subtrees tree with
+    | [] -> None (* Game over *)
+    | [(Action.Skip, next_subtree);] -> 
+      inform_all_observers t (TurnAction Action.Skip);
+      Some(next_subtree)
+    | _ -> handle_current_player_turn_action t tree
+  in
+  (* A loop mainly responsible for updating [t.state] *)
+  let rec loop (tree : GT.t) : unit =
+    match get_next_subtree tree with
+    | None -> ()
+    | Some(next_subtree) ->
+      t.state <- Some(GT.get_state next_subtree);
+      loop next_subtree
+  in
+  Option.iter ~f:loop @@ Option.map ~f:GT.create t.state;
 ;;
 
 (** ASSUME: [t.color_to_player] has been properly instantiated.
-    EFFECT: upadte [t.color_to_player], [t.state] and [t.failed].
-    RETURN: resulting game state or [None] if all players are removed. *)
-let handle_color_assignment_phase t (state : GS.t) : GS.t option =
+    EFFECT: upadte [t.color_to_player], [t.state] and [t.failed]. *)
+let handle_color_assignment_phase t : unit =
   (* assign color to current player and return resulting game state *)
   let handle_current_player state : GS.t option =
     let color = GS.get_current_player state |> PS.get_player_color in
     let player = get_player_with_color t color in
     let result = timeout 
-        (fun () -> Player.assign_color player color) 
-        C.assign_color_timeout_s in
+        (fun () -> player#assign_color color) C.assign_color_timeout_s in
     match result with
     | None -> handle_current_player_failed t
-    | _ -> t.state
+    | _ -> Some(GS.rotate_to_next_player state)
   in
-  let rec go more_times state : GS.t option =
-    t.state <- Some(state);
+  let rec go more_times state : unit = (* short circuits if everyone left *)
     match more_times with
-    | 0 -> t.state
-    | _ -> Option.bind ~f:(go @@ more_times-1) 
-             (handle_current_player @@ GS.rotate_to_next_player state)
+    | 0 -> ()
+    | _ -> Option.iter (handle_current_player state) 
+             ~f:(fun next_state ->
+                 t.state <- Some(next_state);
+                 go (more_times-1) next_state)
   in
-  go (List.length @@ GS.get_ordered_players state) state;
+  Option.iter t.state 
+    ~f:(fun state -> go (List.length @@ GS.get_ordered_players state) state)
 ;;
 
 (** Error if given invalid # of players *)
@@ -229,7 +242,8 @@ let create_color_to_player_mapping_exn players : color_player_map =
   then failwith ("Invalid number of players: " ^ (string_of_int player_count))
   else List.cartesian_product C.init_colors players
 
-(** Fail if there aren't enough non-hole tiles to place penguins *)
+(** ASSUME: [t.color_to_player] has been instantiated properly.
+    Fail if there aren't enough non-hole tiles to place penguins *)
 let create_and_validate_game_state_exn t board_config : GS.t =
   let board = Board.create board_config in
   let colors = List.map ~f:Tuple.T2.get1 t.color_to_player in
@@ -261,23 +275,32 @@ let collect_result t : Game_result.t =
     { winners; rest; failed; cheaters; }
 ;;
 
+let collect_and_report_result t : Game_result.t =
+  let result = collect_result t in
+  inform_all_observers t (EndOfGame result);
+  result
+;;
+
+(** Update fields in [t] for starting a new game *)
+let init_referee_exn t players board_config =
+  t.cheaters <- [];
+  t.failed <- [];
+  t.color_to_player <- create_color_to_player_mapping_exn players;
+  t.state <- Some(create_and_validate_game_state_exn t board_config);
+;;
+
 let create () =
   { state = None; cheaters = []; failed = [];
     observers = []; color_to_player = [];}
 ;;
 
 let run_game t players board_config =
-  t.state <- None; (* signals start of a new game *)
-  t.color_to_player <- create_color_to_player_mapping_exn players;
-  let state = create_and_validate_game_state_exn t board_config in
-  Core.ignore (* short circuit in any phase if everyone is removed *)
-    begin let open Option.Let_syntax in
-      let%bind state = handle_color_assignment_phase t state in
-      inform_all_observers t (Game_observer.Register state);
-      let%bind state = handle_penguin_placement_phase t state in
-      handle_turn_action_phase t (GT.create state)
-    end;
-  let result = collect_result t in
-  inform_all_observers t (Game_observer.EndOfGame result);
-  result
+  init_referee_exn t players board_config;
+  Option.iter t.state ~f:(fun state -> inform_all_observers t (Register state));
+  (* if all players are removed in any phase, [t.state] becomes [None] and
+   * the control flow effectively short circuits all the way through *)
+  handle_color_assignment_phase t;
+  handle_penguin_placement_phase t;
+  handle_turn_action_phase t;
+  collect_and_report_result t;
 ;;
