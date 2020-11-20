@@ -1,0 +1,4 @@
+(tests
+  (names referee_test)
+  (libraries ounit2 fish)
+)

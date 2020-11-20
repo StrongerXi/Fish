@@ -63,9 +63,9 @@ end
 let timeout (f : unit -> 'a) (sec : int) : 'a option =
   let comp = Lwt.map (fun f -> f ()) (Lwt.return f)
              |> Lwt.map Option.some in
-  let timeout =
-    Lwt_main.run @@ Lwt_unix.sleep (float_of_int sec);
-    Lwt.return None in
+  let timeout = Lwt.bind
+      (Lwt_unix.sleep (float_of_int sec))
+      (Core.const @@ Lwt.return None) in
   Lwt_main.run (Lwt.pick [comp; timeout])
 ;;
 
@@ -237,10 +237,15 @@ let handle_color_assignment_phase t : unit =
 
 (** Error if given invalid # of players *)
 let create_color_to_player_mapping_exn players : color_player_map =
+  let rec zip_to_shortest xs ys =
+    match xs, ys with
+    | [], _ | _, [] -> []
+    | x::xs, y::ys -> (x, y)::(zip_to_shortest xs ys)
+  in
   let player_count = List.length players in
   if player_count < C.min_num_of_players || player_count > C.max_num_of_players
   then failwith ("Invalid number of players: " ^ (string_of_int player_count))
-  else List.cartesian_product C.init_colors players
+  else zip_to_shortest C.init_colors players
 
 (** ASSUME: [t.color_to_player] has been instantiated properly.
     Fail if there aren't enough non-hole tiles to place penguins *)
