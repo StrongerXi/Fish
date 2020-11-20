@@ -268,7 +268,9 @@ let collect_result t : Game_result.t =
   | None -> { winners = []; rest = []; failed; cheaters }
   | Some(state) ->
     let players = GS.get_ordered_players state in
-    let max_score = Option.value_map ~default:0 ~f:PS.get_score @@ List.hd players in
+    let max_score = List.map ~f:PS.get_score players
+                    |> List.max_elt ~compare:Int.compare
+                    |> Option.value ~default:0 in
     let winners = 
       List.filter ~f:(fun p -> (PS.get_score p) = max_score) players
       |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
