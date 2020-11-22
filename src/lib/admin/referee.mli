@@ -33,8 +33,18 @@ module C : sig
   val max_num_of_players : int
 end
 
+(* Enable clients to override default time out configurations *)
+type timeout_config = 
+  { assign_color_timeout_s : int
+  ; placement_timeout_s : int
+  ; turn_action_timeout_s : int
+  ; inform_disqualified_timeout_s : int
+  ; inform_observer_timeout_s : int
+  }
+val default_timeout_config : timeout_config
+
 (** Create a referee, waiting to run a game *)
-val create : unit -> t
+val create : ?config:timeout_config -> unit -> t
 
 (** EFFECT: update [t] to keep track of given observer and inform it of ongoing
     game events (if a game is running) *)

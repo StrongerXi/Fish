@@ -4,7 +4,7 @@
   (modules_without_implementation 
    fish util common gui serialize admin
   )
-  (libraries graphics extlib yojson core lwt lwt.unix)
+  (libraries graphics extlib yojson core)
   (preprocess (pps ppx_deriving.show ppx_jane))
 )
 

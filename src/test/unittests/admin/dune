@@ -1,4 +1,4 @@
 (tests
-  (names referee_test)
+  (names referee_test mock_players)
   (libraries ounit2 fish)
 )

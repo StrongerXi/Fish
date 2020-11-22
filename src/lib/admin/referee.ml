@@ -1,4 +1,5 @@
 open !Core
+open Async
 
 module Game_result = struct
   type t =
@@ -24,6 +25,14 @@ module GT = Common.Game_tree
 module GS = Common.Game_state
 module PS = Common.Player_state
 
+type timeout_config = 
+  { assign_color_timeout_s : int
+  ; placement_timeout_s : int
+  ; turn_action_timeout_s : int
+  ; inform_disqualified_timeout_s : int
+  ; inform_observer_timeout_s : int
+  }
+
 type color_player_map = (Color.t * Player.t) list
 
 (** A [t] represents a referee which manages an entire fish game from start to
@@ -43,6 +52,7 @@ type t =
   ; mutable cheaters : Color.t list
   ; mutable failed : Color.t list
   ; mutable observers : Game_observer.t list
+  ; conf : timeout_config
   (* Note that synchronization is not added yet since there doesn't seem to be
    * any data race condition *)
   }
@@ -52,21 +62,14 @@ module C = struct
   let min_num_of_players = 2
   let max_num_of_players = 4
   let init_colors = [Color.Red; Color.Black; Color.White; Color.Brown;]
-  let placement_timeout_s = 10
-  let turn_action_timeout_s = 10
-  let assign_color_timeout_s = 10
-  let inform_disqualified_timeout_s = 10
-  let inform_observer_timeout_s = 10
 end
 
+let rec forever () = forever ()
+
 (** Return [Some result] if [f ()] returns [result] within [sec] seconds. *)
-let timeout (f : unit -> 'a) (sec : int) : 'a option =
-  let comp = Lwt.map (fun f -> f ()) (Lwt.return f)
-             |> Lwt.map Option.some in
-  let timeout = Lwt.bind
-      (Lwt_unix.sleep (float_of_int sec))
-      (Core.const @@ Lwt.return None) in
-  Lwt_main.run (Lwt.pick [comp; timeout])
+let timeout (f : unit -> 'a) (_ : int) : 'a option =
+  (* TODO can't find a good solution. Tried Async, Lwt and Thread *)
+  Option.some @@ f ()
 ;;
 
 (** EFFECT: update [t.observers] *)
@@ -82,7 +85,7 @@ let inform_all_observers t event : unit=
     List.map t.observers
       ~f:(fun observer -> 
           Option.map ~f:(Fun.const observer) @@
-          timeout (fun () -> observer event) C.inform_observer_timeout_s)
+          timeout (fun () -> observer event) t.conf.inform_observer_timeout_s)
   in t.observers <- remaining_observers
 ;;
 
@@ -107,7 +110,7 @@ let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
         let player = get_player_with_color t color in
         Core.ignore @@ timeout 
           (fun () -> player#inform_disqualified ()) 
-          C.inform_disqualified_timeout_s;
+          t.conf.inform_disqualified_timeout_s;
         (match why with
          | `Cheat -> t.cheaters <- color::t.cheaters
          | `Fail  -> t.failed   <- color::t.failed);
@@ -131,7 +134,7 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let color = PS.get_player_color player_state in
   let player = get_player_with_color t color in
   let response = Option.join @@
-    timeout (fun () -> player#place_penguin gs) C.placement_timeout_s in
+    timeout (fun () -> player#place_penguin gs) t.conf.placement_timeout_s in
   match response with (* same treatment to timeout and communication failure *) 
   | None -> handle_current_player_failed t
   | Some(pos) ->
@@ -178,7 +181,7 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
   let color = PS.get_player_color @@ GS.get_current_player state in
   let player = get_player_with_color t color in
   let response = Option.join @@
-    timeout (fun () -> player#take_turn tree) C.turn_action_timeout_s in
+    timeout (fun () -> player#take_turn tree) t.conf.turn_action_timeout_s in
   match response with (* same treatment for timeout and communication failure *) 
   | None -> Option.map ~f:GT.create @@ handle_current_player_failed t
   | Some(action) ->
@@ -218,7 +221,7 @@ let handle_color_assignment_phase t : unit =
     let color = GS.get_current_player state |> PS.get_player_color in
     let player = get_player_with_color t color in
     let result = timeout 
-        (fun () -> player#assign_color color) C.assign_color_timeout_s in
+        (fun () -> player#assign_color color) t.conf.assign_color_timeout_s in
     match result with
     | None -> handle_current_player_failed t
     | _ -> Some(GS.rotate_to_next_player state)
@@ -296,9 +299,18 @@ let init_referee_exn t players board_config =
   t.state <- Some(create_and_validate_game_state_exn t board_config);
 ;;
 
-let create () =
+let default_timeout_config =
+  { placement_timeout_s = 10
+  ; turn_action_timeout_s = 10
+  ; assign_color_timeout_s = 10
+  ; inform_disqualified_timeout_s = 10
+  ; inform_observer_timeout_s = 10
+  }
+;;
+
+let create ?(config = default_timeout_config) () =
   { state = None; cheaters = []; failed = [];
-    observers = []; color_to_player = [];}
+    observers = []; color_to_player = []; conf = config; }
 ;;
 
 let run_game t players board_config =
