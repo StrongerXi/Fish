@@ -16,6 +16,11 @@ let rec assoc_res (kvs : (string * 'a) list) (key : string) :
   | _::kvs -> assoc_res kvs key
   | _ -> Result.fail @@ "key [" ^ key ^ "] not found"
 
+let to_nat (t : t) (errmsg : string) : (int, string) result =
+  match t with
+  | `Int(n) when n >= 0 -> Result.return n
+  | _ -> Result.fail errmsg
+
 
 let from_pos (pos : Position.t) : t =
   `List([`Int(pos.row); `Int(pos.col)])
@@ -29,10 +34,9 @@ let to_pos (t : t) : (Position.t, string) result =
 let from_tile (tile : Tile.t) : t = `Int(Tile.get_fish tile)
 
 let to_tile (t : t) : (Tile.t, string) result =
-  match t with
-  | `Int(n) when n >= 0 -> 
-    Result.return (if n = 0 then Tile.hole else Tile.create n)
-  | _ -> Result.fail "Tile expects a single non-negative integer"
+  Result.bind
+    ~f:(fun n -> Result.return (if n = 0 then Tile.hole else Tile.create n))
+    (to_nat t "Tile expects a single non-negative integer")
 ;;
 
 let from_board (board : Board.t) : t =
@@ -83,9 +87,7 @@ let to_color t : (Player_color.t, string) result =
 ;;
 
 let to_score t : (int, string) result =
-  match t with
-  | `Int(score) when score >= 0 -> Result.return score
-  | _ -> Result.fail "Score must be a non-negative integer"
+  to_nat t "Score must be a non-negative integer"
 ;;
 
 let from_player (player : Player_state.t) : t =
@@ -95,7 +97,7 @@ let from_player (player : Player_state.t) : t =
   in
   `Assoc([("color", color_t); ("score", score_t); ("places", pengs_t);])
 
-let to_player (t : t) : (Player_state.t, string) result =
+let to_player_state (t : t) : (Player_state.t, string) result =
   let open Result.Let_syntax in
   match t with
   | `Assoc(kv_pairs) ->
@@ -121,8 +123,22 @@ let to_player (t : t) : (Player_state.t, string) result =
 
 let to_player_list (t : t) : (Player_state.t list, string) result =
   match t with
-  | `List(player_ts) -> player_ts |> List.map ~f:to_player |> Result.all
+  | `List(player_ts) -> player_ts |> List.map ~f:to_player_state |> Result.all
   | _ -> Result.fail "Player list must be a list of players"
+;;
+
+let to_player (t : t) : (Player.t, string) result =
+  match t with
+  |`List([`String(name); `Int(depth)]) when 0 < depth && depth <= 2 -> 
+    Result.return @@ Player.create_AI_player ~name
+      Strategy.Penguin_placer.create_scanning_strategy
+      (Strategy.Turn_actor.create_minimax_strategy depth)
+  | _ -> Result.fail "Player must be an array of name and search depth"
+
+let to_players (t : t) : (Player.t list, string) result =
+  match t with
+  | `List(player_ts) -> player_ts |> List.map ~f:to_player |> Result.all
+  | _ -> Result.fail "Players must be an array of players"
 ;;
 
 (* -------------------------------------------------------------- *)
@@ -190,13 +206,37 @@ let to_move_resp_query t =
     return (state, src, dst)
   | _ -> Result.fail "Move_Response_Query must be a json object"
 
-let to_string (t : t) = YB.to_string t
+let to_game_description t =
+  let open Result.Let_syntax in
+  match t with
+  | `Assoc(kv_pairs) ->
+    let%bind 
+      players_t = assoc_res kv_pairs "players" and
+      row_t = assoc_res kv_pairs "row" and
+      col_t = assoc_res kv_pairs "column" and
+      fish_t = assoc_res kv_pairs "fish" in
+    let%bind 
+      players = to_players players_t and
+      row = to_nat row_t "row must be a natural number" and
+      col = to_nat col_t "col must be a natural number" and
+      fish = to_nat fish_t "default # of fish must be a natural number" in
+    return (row, col, players, fish)
+  | _ -> Result.fail "Move_Response_Query must be a json object"
+
+
+let from_list xs serializer = `List(List.map ~f:serializer xs)
 ;;
 
-let from_string str = 
-  try 
+let from_string s = `String s
+;;
+
+let from_json_string str =
+  try
     Some(YB.from_string str)
-  with YB.Finally(_) -> None
+  with Yojson.Json_error(_) -> None
+;;
+
+let to_json_string (t : t) = YB.to_string t
 ;;
 
 let stream_from_channel in_chan =

@@ -6,7 +6,7 @@ module B = Fish.Common.Board
  * positions starting from that position on the board *)
 let () =
   let input = Core.In_channel.input_all Core.In_channel.stdin in
-  let serialized = S.from_string input 
+  let serialized = S.from_json_string input 
                    |> Result.of_option ~error:"invalid serialization form" in
   match Result.bind ~f:S.to_board_posn serialized with
   | Error(reason) -> Printf.printf "Invalid input, reason: %s\n" reason

@@ -73,6 +73,9 @@ val get_tile_at : t -> Position.t -> Tile.t
     Errors if the position is out of bound *)
 val remove_tile_at : t -> Position.t -> t
 
+(** Return the # of tiles that aren't holes on given board *)
+val num_of_non_hole_tiles : t -> int
+
 (** Return all positions reachable from given position on the board via straight
     lines following each direction in [Direction.t]. Return a list that
     associates each direction with the reachable positions ordered by their

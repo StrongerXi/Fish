@@ -1,3 +1,4 @@
+open !Core
 module GS = Fish.Common.Game_state
 module B = Fish.Common.Board
 module Conf = Fish.Common.Board.Config
@@ -15,11 +16,11 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let board = B.create conf in
         let colors = [Color.Black; Color.Brown; Color.Red;] in
         let state = GS.create board colors in
-        let players = List.map PS.create colors in
+        let players = List.map ~f:PS.create colors in
 
         OUnit.assert_equal board @@ GS.get_board_copy state;
         OUnit.assert_equal players @@ GS.get_ordered_players state;
-        OUnit.assert_equal (List.hd players) @@ GS.get_current_player state;
+        OUnit.assert_equal (List.hd_exn players) @@ GS.get_current_player state;
 
        (* errors on invalid player colors *)
         let expect = Failure "There must be at least 1 player in a game" in
@@ -37,15 +38,42 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let colors = [Color.Black; Color.Brown; Color.Red;] in
         let state = GS.create board colors in
 
-        List.iter (fun color -> OUnit.assert_equal 
-                      (PS.create color) 
-                      (GS.get_player_with_color state color)) colors;
+        List.iter ~f:(fun color -> OUnit.assert_equal 
+                         (PS.create color) 
+                         (GS.get_player_with_color state color)) colors;
 
         (* errors on unregistered color *)
         let expect = 
           Failure "No player has specified color in this game state" in
         OUnit2.assert_raises expect (fun () -> 
             GS.get_player_with_color state PS.Player_color.White);
+      );
+
+    OUnit2.(>::) "test_remove_current_player" (fun _ ->
+        let conf = Conf.create ~width:3 ~height:3
+                    |> Conf.set_default_num_of_fish 3
+                    |> Conf.set_holes [] in
+        let board = B.create conf in
+        let colors = [Color.Black; Color.Brown; Color.Red;] in
+        let state = GS.create board colors in
+        let state = GS.place_penguin state Color.Red { Pos.row = 1; col = 1 } in
+        let state = GS.place_penguin state Color.Brown { Pos.row = 0; col = 2 } in
+        let players = GS.get_ordered_players state in
+
+        (* removing player has no effect on the board *)
+        let state = GS.remove_current_player state in
+        OUnit.assert_equal (Some board) (Option.map ~f:GS.get_board_copy state);
+        (* removing middle player doesn't affect the overall player order *)
+        OUnit.assert_equal 
+          (Some (List.tl_exn players)) 
+          (Option.map ~f:GS.get_ordered_players state);
+
+        (* error on removing last player *)
+        let state = Option.bind ~f:GS.remove_current_player state in
+        OUnit.assert_equal 
+          (Some (players |> List.tl_exn |> List.tl_exn) )
+          (Option.map ~f:GS.get_ordered_players state);
+        OUnit2.assert_equal None (Option.bind ~f:GS.remove_current_player state)
       );
 
     OUnit2.(>::) "test_rotate_players" (fun _ ->
@@ -59,24 +87,24 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         (* 2 rotations for all players *)
         let state = 
           List.fold_left
-            (fun gs color -> 
+            ~f:(fun gs color -> 
                OUnit.assert_equal (PS.create color) @@ GS.get_current_player gs;
                GS.rotate_to_next_player gs)
-            state colors 
+            ~init:state colors 
         in
         let state = 
           List.fold_left
-            (fun gs color -> 
+            ~f:(fun gs color -> 
                OUnit.assert_equal (PS.create color) @@ GS.get_current_player gs;
                GS.rotate_to_next_player gs)
-            state colors 
+            ~init:state colors 
         in
 
         (* rotation shouldn't affect relative player order *)
         let state = GS.rotate_to_next_player state in
         let colors = [Color.Brown; Color.Red; Color.Black;] in
        OUnit.assert_equal 
-         (List.map PS.create colors) @@ GS.get_ordered_players state;
+         (List.map ~f:PS.create colors) @@ GS.get_ordered_players state;
 
         (* Rotate with 1 single player *)
        let state = GS.create board [PS.Player_color.White] in
@@ -100,7 +128,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let state1 = GS.place_penguin state0 Color.Brown pos11 in
         let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
-        let p = List.nth players 1 in
+        let p = List.nth_exn players 1 in
         OUnit2.assert_equal [PN.create pos11;] @@ PS.get_penguins p;
 
         (* penguin placement shouldn't affect the board *)
@@ -112,7 +140,7 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let state1 = GS.place_penguin state1 Color.Brown pos02 in
         let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
-        let p = List.nth players 1 in
+        let p = List.nth_exn players 1 in
         OUnit2.assert_equal [PN.create pos02; PN.create pos11] @@ PS.get_penguins p;
 
         (* fails as expected when input is bad *)
@@ -159,8 +187,8 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         (* Player should be updated after move *)
         let players = GS.get_ordered_players state1 in
         OUnit2.assert_equal (List.length colors) @@ List.length players;
-        OUnit2.assert_equal 3 @@ PS.get_score @@ List.nth players 1;
-        OUnit2.assert_equal 0 @@ PS.get_score @@ List.nth players 0;
+        OUnit2.assert_equal 3 @@ PS.get_score @@ List.nth_exn players 1;
+        OUnit2.assert_equal 0 @@ PS.get_score @@ List.nth_exn players 0;
 
         (* fails as expected when input is bad *)
         let expect = Failure "Position is outside the board" in
@@ -195,11 +223,12 @@ let tests = OUnit2.(>:::) "game_state_tests" [
         let state = GS.place_penguin state Color.Red pos23 in
         let board = GS.get_board_minus_penguins state in
         Pos.create_positions_within ~width:5 ~height:5
-        |> List.iter (fun pos ->
-            let tile = B.get_tile_at board pos in
-            if pos = pos11 || pos = pos23
-            then OUnit2.assert_equal true @@ T.is_hole tile
-            else OUnit2.assert_equal false @@ T.is_hole tile)
+        |> List.iter 
+          ~f:(fun pos ->
+              let tile = B.get_tile_at board pos in
+              if Pos.equal pos pos11 || Pos.equal pos pos23
+              then OUnit2.assert_equal true @@ T.is_hole tile
+              else OUnit2.assert_equal false @@ T.is_hole tile)
       );
   ]
 

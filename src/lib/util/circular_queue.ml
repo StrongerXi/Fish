@@ -27,5 +27,14 @@ let rotate { nexts; current; prevs } =
   | n::ns -> { nexts = ns; current = n; prevs = current::prevs }
 ;;
 
+let remove_current t =
+  match t.nexts with
+  | x::nexts -> Some { t with current = x; nexts }
+  | [] -> 
+    match List.rev t.prevs with
+    | [] -> None
+    | x::prevs -> Some { prevs; current = x; nexts = [] }
+;;
+
 let to_list { nexts; current; prevs } =
   current::nexts @ (List.rev prevs) (* the one before [current] is the last *)
