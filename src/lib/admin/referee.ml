@@ -1,5 +1,4 @@
 open !Core
-open Async
 
 module Game_result = struct
   type t =
@@ -12,10 +11,10 @@ end
 
 module Game_observer = struct
   type event =
-    | Register of Game_state.t
-    | PenguinPlacement of Position.t
-    | TurnAction of Action.t
-    | Disqualify of Player_state.Player_color.t
+    | Register of Game_state.t 
+    | PenguinPlacement of Game_state.t * Player_state.Player_color.t * Position.t
+    | TurnAction of Game_state.t * Player_state.Player_color.t * Action.t
+    | Disqualify of Game_state.t option * Player_state.Player_color.t
     | EndOfGame of Game_result.t
   type t = event -> unit
 end
@@ -114,8 +113,9 @@ let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
         (match why with
          | `Cheat -> t.cheaters <- color::t.cheaters
          | `Fail  -> t.failed   <- color::t.failed);
-        inform_all_observers t (Disqualify color);
-        GS.remove_current_player state)
+        let new_state = GS.remove_current_player state in
+        inform_all_observers t (Disqualify(new_state, color));
+        new_state)
 ;;
 
 let handle_current_player_cheated (t : t) : GS.t option =
@@ -141,8 +141,10 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
     if Board.within_board board pos && 
        not @@ Tile.is_hole @@ Board.get_tile_at board pos
     then 
-      (inform_all_observers t (PenguinPlacement pos);
-       Option.some @@ GS.rotate_to_next_player @@ GS.place_penguin gs color pos)
+      let new_state =
+        GS.rotate_to_next_player @@ GS.place_penguin gs color pos in
+      inform_all_observers t (PenguinPlacement(new_state, color, pos));
+      Option.some new_state
     else handle_current_player_failed t
 ;;
 
@@ -188,8 +190,9 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
     match List.Assoc.find ~equal:Action.equal subtrees action with
     | None -> Option.map ~f:GT.create @@ handle_current_player_cheated t
     | Some(next_sub_tree) -> 
-      (inform_all_observers t (TurnAction action);
-       Option.some next_sub_tree)
+      let new_state = GT.get_state next_sub_tree in
+      inform_all_observers t (TurnAction(new_state, color, action));
+      Option.some next_sub_tree
 ;;
 
 (* EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
@@ -198,7 +201,11 @@ let handle_turn_action_phase (t : t) : unit =
     match GT.get_subtrees tree with
     | [] -> None (* Game over *)
     | [(Action.Skip, next_subtree);] -> 
-      inform_all_observers t (TurnAction Action.Skip);
+      (* TODO refactor into 1 single inform_all_observers *)
+      let new_state = GT.get_state next_subtree in
+      let color = GT.get_state tree
+                  |> GS.get_current_player |> PS.get_player_color in
+      inform_all_observers t (TurnAction(new_state, color, Action.Skip));
       Some(next_subtree)
     | _ -> handle_current_player_turn_action t tree
   in

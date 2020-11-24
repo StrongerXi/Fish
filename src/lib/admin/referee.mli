@@ -9,11 +9,12 @@ end
 
 module Game_observer : sig
   type event =
-    (* invoked when the game start, or the [t] is registered during a game *)
+    (* invoked when the game start, or [t] is registered during a game.
+       Each event contains the most up-to-date game state *)
     | Register of Game_state.t 
-    | PenguinPlacement of Position.t
-    | TurnAction of Action.t
-    | Disqualify of Player_state.Player_color.t
+    | PenguinPlacement of Game_state.t * Player_state.Player_color.t * Position.t
+    | TurnAction of Game_state.t * Player_state.Player_color.t * Action.t
+    | Disqualify of Game_state.t option * Player_state.Player_color.t
     | EndOfGame of Game_result.t
   type t = event -> unit
 end
