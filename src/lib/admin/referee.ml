@@ -175,6 +175,16 @@ let handle_penguin_placement_phase (t : t) : unit =
   Option.iter ~f:loop t.state;
 ;;
 
+(** Skip on the player's behalf if it can't move.
+    Return [None] if there was a communication failure or time out *)
+let get_player_action (t : t) (player : Player.t) (tree : GT.t)
+  : Action.t option =
+  match GT.get_subtrees tree with
+  | [(Action.Skip, _);] ->  Option.some Action.Skip
+  | _ ->
+    Option.join @@
+    timeout (fun () -> player#take_turn tree) t.conf.turn_action_timeout_s
+
 (** EFFECT: update [t.cheaters] or [t.failed] if current player cheats/fails.
     RETURN: final game tree or [None] if all players are removed. *)
 let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
@@ -182,9 +192,7 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
   let state = GT.get_state tree in
   let color = PS.get_player_color @@ GS.get_current_player state in
   let player = get_player_with_color t color in
-  let response = Option.join @@
-    timeout (fun () -> player#take_turn tree) t.conf.turn_action_timeout_s in
-  match response with (* same treatment for timeout and communication failure *) 
+  match get_player_action t player tree with
   | None -> Option.map ~f:GT.create @@ handle_current_player_failed t
   | Some(action) ->
     match List.Assoc.find ~equal:Action.equal subtrees action with
@@ -197,25 +205,13 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
 
 (* EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
 let handle_turn_action_phase (t : t) : unit =
-  let get_next_subtree (tree : GT.t) : GT.t option =
-    match GT.get_subtrees tree with
-    | [] -> None (* Game over *)
-    | [(Action.Skip, next_subtree);] -> 
-      (* TODO refactor into 1 single inform_all_observers *)
-      let new_state = GT.get_state next_subtree in
-      let color = GT.get_state tree
-                  |> GS.get_current_player |> PS.get_player_color in
-      inform_all_observers t (TurnAction(new_state, color, Action.Skip));
-      Some(next_subtree)
-    | _ -> handle_current_player_turn_action t tree
-  in
-  (* A loop mainly responsible for updating [t.state] *)
   let rec loop (tree : GT.t) : unit =
-    match get_next_subtree tree with
-    | None -> ()
-    | Some(next_subtree) ->
-      t.state <- Some(GT.get_state next_subtree);
-      loop next_subtree
+    match GT.get_subtrees tree with
+    | [] -> () (* Game over *)
+    | _ -> Option.iter (handle_current_player_turn_action t tree)
+             ~f:(fun next_subtree ->
+                 t.state <- Some(GT.get_state next_subtree);
+                 loop next_subtree);
   in
   Option.iter ~f:loop @@ Option.map ~f:GT.create t.state;
 ;;
