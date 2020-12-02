@@ -1,4 +1,5 @@
 open !Core
+module Mutex = Error_checking_mutex
 
 module Game_result = struct
   type t =
@@ -52,6 +53,7 @@ type t =
   ; mutable failed : Color.t list
   ; mutable observers : Game_observer.t list
   ; conf : timeout_config
+  ; state_lock : Mutex.t
   (* Note that synchronization is not added yet since there doesn't seem to be
    * any data race condition *)
   }
@@ -71,10 +73,24 @@ let timeout (f : unit -> 'a) (_ : int) : 'a option =
   Option.some @@ f ()
 ;;
 
+(* synchronized read/write to the state *)
+let read_state (t : t) : GS.t option =
+  Mutex.lock t.state_lock;
+  let state = t.state in
+  Mutex.unlock t.state_lock;
+  state
+;;
+
+let write_state (t : t) (state : GS.t option) : unit =
+  Mutex.lock t.state_lock;
+  t.state <- state;
+  Mutex.unlock t.state_lock;
+;;
+
 (** EFFECT: update [t.observers] *)
 let add_game_observer t observer =
   t.observers <- observer::t.observers;
-  Option.iter t.state ~f:(fun state -> observer (Register state))
+  Option.iter (read_state t) ~f:(fun state -> observer (Register state))
 ;;
 
 (** EFFECT: update [t.observers] to remove the observer(s) which time out *)
@@ -103,7 +119,7 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
 (** EFFECT: Update [t.cheaters] or [t.failed] if [t.state] is populated.
     RETURN: the new game state, or [None] if all players are removed. *)
 let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
-  Option.bind t.state
+  Option.bind (read_state t)
     ~f:(fun state ->
         let color = GS.get_current_player state |> PS.get_player_color in
         let player = get_player_with_color t color in
@@ -150,8 +166,9 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
 
 (** EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
 let handle_penguin_placement_phase (t : t) : unit =
+  let state = read_state t in (* write is exclusively here during this phase *)
   let penguins_per_player = 
-    Option.value_map t.state ~default:0 ~f:num_of_penguin_per_player in
+    Option.value_map state ~default:0 ~f:num_of_penguin_per_player in
   let all_players_have_enough_penguins state : bool =
     List.map ~f:PS.get_penguins @@ GS.get_ordered_players state
     |> List.for_all ~f:(fun pgs -> penguins_per_player = (List.length pgs))
@@ -169,10 +186,10 @@ let handle_penguin_placement_phase (t : t) : unit =
     match get_next_state state with
     | None -> ()
     | Some(next_state) -> 
-      t.state <- Some(next_state);
+      write_state t (Some next_state);
       loop next_state
   in
-  Option.iter ~f:loop t.state;
+  Option.iter ~f:loop state;
 ;;
 
 (** Skip on the player's behalf if it can't move.
@@ -210,10 +227,10 @@ let handle_turn_action_phase (t : t) : unit =
     | [] -> () (* Game over *)
     | _ -> Option.iter (handle_current_player_turn_action t tree)
              ~f:(fun next_subtree ->
-                 t.state <- Some(GT.get_state next_subtree);
+                 write_state t (Some(GT.get_state next_subtree));
                  loop next_subtree);
   in
-  Option.iter ~f:loop @@ Option.map ~f:GT.create t.state;
+  Option.iter ~f:loop @@ Option.map ~f:GT.create (read_state t);
 ;;
 
 (** ASSUME: [t.color_to_player] has been properly instantiated.
@@ -234,10 +251,10 @@ let handle_color_assignment_phase t : unit =
     | 0 -> ()
     | _ -> Option.iter (handle_current_player state) 
              ~f:(fun next_state ->
-                 t.state <- Some(next_state);
+                 write_state t (Some next_state);
                  go (more_times-1) next_state)
   in
-  Option.iter t.state 
+  Option.iter (read_state t)
     ~f:(fun state -> go (List.length @@ GS.get_ordered_players state) state)
 ;;
 
@@ -270,7 +287,7 @@ let create_and_validate_game_state_exn t board_config : GS.t =
 let collect_result t : Game_result.t =
   let cheaters = List.map ~f:(get_player_with_color t) t.cheaters in
   let failed = List.map ~f:(get_player_with_color t) t.failed in
-  match t.state with
+  match read_state t with
   | None -> { winners = []; rest = []; failed; cheaters }
   | Some(state) ->
     let players = GS.get_ordered_players state in
@@ -299,7 +316,7 @@ let init_referee_exn t players board_config =
   t.cheaters <- [];
   t.failed <- [];
   t.color_to_player <- create_color_to_player_mapping_exn players;
-  t.state <- Some(create_and_validate_game_state_exn t board_config);
+  write_state t (Some(create_and_validate_game_state_exn t board_config));
 ;;
 
 let default_timeout_config =
@@ -312,13 +329,14 @@ let default_timeout_config =
 ;;
 
 let create ?(config = default_timeout_config) () =
-  { state = None; cheaters = []; failed = [];
-    observers = []; color_to_player = []; conf = config; }
+  { state = None; cheaters = []; failed = []; observers = [];
+    color_to_player = []; conf = config; state_lock = Mutex.create (); }
 ;;
 
 let run_game t players board_config =
   init_referee_exn t players board_config;
-  Option.iter t.state ~f:(fun state -> inform_all_observers t (Register state));
+  Option.iter (read_state t)
+    ~f:(fun state -> inform_all_observers t (Register state));
   (* if all players are removed in any phase, [t.state] becomes [None] and
    * the control flow effectively short circuits all the way through *)
   handle_color_assignment_phase t;
