@@ -20,8 +20,7 @@ module Game_observer : sig
 end
 
 (** A [t] represents a referee which manages an entire fish game from start to
-    end. A [t] manages exactly 1 game and becomes obselete after the game ends.
-    It can:
+    end. It can:
     - Set up and run a game given a board config and ordered list of [Player.t]s
     - Add [Game_observer.t] before or during a game, and periodically report
       game events to the observers.
