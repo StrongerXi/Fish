@@ -70,6 +70,10 @@ let to_penguin (t : t) : (Penguin.t, string) result =
   Result.map ~f:Penguin.create @@ to_pos t
 ;;
 
+let to_score t : (int, string) result =
+  to_nat t "Score must be a non-negative integer"
+;;
+
 let from_color (color : Player_color.t) : t =
   match color with
   | Red   -> `String("red")
@@ -86,9 +90,6 @@ let to_color t : (Player_color.t, string) result =
   | _ -> Result.fail @@ "Unrecognized color: " ^ (YB.to_string t)
 ;;
 
-let to_score t : (int, string) result =
-  to_nat t "Score must be a non-negative integer"
-;;
 
 let from_player (player : Player_state.t) : t =
   let color_t = from_color @@ Player_state.get_player_color player
@@ -141,14 +142,22 @@ let to_players (t : t) : (Player.t list, string) result =
   | _ -> Result.fail "Players must be an array of players"
 ;;
 
-(* -------------------------------------------------------------- *)
-(* ---------------------- exported functions -------------------- *)
-(* -------------------------------------------------------------- *)
-
 let from_action act = 
   match act with
   | Action.Skip -> `String("skip")
   | Action.Move({ src; dst }) -> `List([from_pos src; from_pos dst])
+;;
+
+let to_action t = 
+  match t with
+  | `String("skip") -> Result.return Action.Skip
+  | `List([src_t; dst_t]) ->
+    let open Result.Let_syntax in
+    let%bind src = to_pos src_t in
+    let%bind dst = to_pos dst_t in
+    Result.return @@ Action.Move({ src; dst })
+  | _ -> Result.fail "Action must be a skip string or move array"
+;;
 
 let from_board_posn (board, pos) =
   let bt = from_board board in
@@ -227,7 +236,23 @@ let to_game_description t =
 let from_list xs serializer = `List(List.map ~f:serializer xs)
 ;;
 
+let to_list t deserializer =
+  match t with
+  | `List(ts) -> Result.return @@ List.map ~f:deserializer ts
+  | _ -> Result.fail "Expected an array of json values"
+;;
+
+
 let from_string s = `String s
+;;
+
+let to_string = YB.Util.to_string_option
+;;
+
+let from_bool b = `Bool b
+;;
+
+let to_bool = YB.Util.to_bool_option
 ;;
 
 let from_json_string str =
