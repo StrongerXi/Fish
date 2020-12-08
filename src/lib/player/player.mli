@@ -18,10 +18,12 @@ class virtual t : string -> int -> object
       Return [None] if there is a communication failure or player can't respond *)
   method virtual take_turn : Game_tree.t -> Action.t option
 
-  method inform_tournament_start : unit -> unit
+  (** Return [true] if the player responded *)
+  method inform_tournament_start : unit -> bool
 
-  (** Assign given color to the given player. By default it does nothing. *)
-  method assign_color : Player_state.Player_color.t -> unit
+  (** Assign given color to the given player. By default it does nothing.
+      Return [true] if the player responded *)
+  method assign_color : Player_state.Player_color.t -> bool
 
   (** Return the name associated with this player *)
   method get_name : unit -> string
@@ -31,11 +33,12 @@ class virtual t : string -> int -> object
   method get_age : unit -> int
 
   (** Inform this player that it has been disqualified from a fish game 
-      By default it does nothing. *)
-  method inform_disqualified : unit -> unit
+      Return [true] if the player responded *)
+  method inform_disqualified : unit -> bool
 
-  (** Inform this player whether it has won the tournament *)
-  method inform_tournament_result : bool -> unit
+  (** Inform this player whether it has won the tournament
+      Return [true] if the player responded *)
+  method inform_tournament_result : bool -> bool
 end
 
 (** Create an AI player who uses given strategies for decision making.

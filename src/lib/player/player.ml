@@ -10,10 +10,10 @@ class virtual t (name : string) (age : int) = object
   method virtual take_turn : Game_tree.t -> Action.t option
   method get_name () = name
   method get_age () = age
-  method inform_tournament_start () = ()
-  method assign_color (_ : PS.Player_color.t) = ()
-  method inform_disqualified () = ()
-  method inform_tournament_result (_ : bool) = ()
+  method inform_tournament_start () = true
+  method assign_color (_ : PS.Player_color.t) = true
+  method inform_disqualified () = true
+  method inform_tournament_result (_ : bool) = true
 end
 
 class ai_player 

@@ -236,8 +236,8 @@ let handle_color_assignment_phase t : unit =
     let result = Timeout_util.call_with_timeout_ms
         (fun () -> player#assign_color color) t.conf.assign_color_timeout_ms in
     match result with
-    | None -> handle_current_player_failed t
-    | _ -> Some(GS.rotate_to_next_player state)
+    | Some(true) -> Some(GS.rotate_to_next_player state)
+    | _ -> handle_current_player_failed t
   in
   let rec go more_times state : unit = (* short circuits if everyone left *)
     match more_times with
