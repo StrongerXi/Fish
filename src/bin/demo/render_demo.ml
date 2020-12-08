@@ -1,6 +1,6 @@
 module Game_state = Fish.Common.Game_state
 module Game_tree = Fish.Common.Game_tree
-module Player = Fish.Common.Player
+module Player = Fish.Player
 module Board = Fish.Common.Board
 module Config = Fish.Common.Board.Config
 module Player_color = Fish.Common.Player_state.Player_color

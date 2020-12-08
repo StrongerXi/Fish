@@ -5,4 +5,3 @@ module Tile = Tile
 module Penguin = Penguin
 module Player_state = Player_state
 module Action = Action
-module Player = Player
