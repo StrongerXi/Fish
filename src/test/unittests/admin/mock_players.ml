@@ -7,7 +7,7 @@ open !Core
 (** A default well-behaving AI player which will be extended to create
     misbehaving mock players *)
 class ai_player name = object
-  inherit Fish.Player.t name
+  inherit Fish.Player.t name 42
   val placer = Fish.Player.Strategy.Penguin_placer.create_scanning_strategy
   val actor = Fish.Player.Strategy.Turn_actor.create_minimax_strategy 2
   method place_penguin gs =

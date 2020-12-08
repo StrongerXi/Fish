@@ -35,11 +35,11 @@ end
 
 (* Enable clients to override default time out configurations *)
 type timeout_config = 
-  { assign_color_timeout_s : int
-  ; placement_timeout_s : int
-  ; turn_action_timeout_s : int
-  ; inform_disqualified_timeout_s : int
-  ; inform_observer_timeout_s : int
+  { assign_color_timeout_ms : int
+  ; placement_timeout_ms : int
+  ; turn_action_timeout_ms : int
+  ; inform_disqualified_timeout_ms : int
+  ; inform_observer_timeout_ms : int
   }
 val default_timeout_config : timeout_config
 

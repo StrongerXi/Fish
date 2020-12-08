@@ -26,11 +26,11 @@ module GS = Common.Game_state
 module PS = Common.Player_state
 
 type timeout_config = 
-  { assign_color_timeout_s : int
-  ; placement_timeout_s : int
-  ; turn_action_timeout_s : int
-  ; inform_disqualified_timeout_s : int
-  ; inform_observer_timeout_s : int
+  { assign_color_timeout_ms : int
+  ; placement_timeout_ms : int
+  ; turn_action_timeout_ms : int
+  ; inform_disqualified_timeout_ms : int
+  ; inform_observer_timeout_ms : int
   }
 
 type color_player_map = (Color.t * Player.t) list
@@ -65,14 +65,6 @@ module C = struct
   let init_colors = [Color.Red; Color.Black; Color.White; Color.Brown;]
 end
 
-let rec forever () = forever ()
-
-(** Return [Some result] if [f ()] returns [result] within [sec] seconds. *)
-let timeout (f : unit -> 'a) (_ : int) : 'a option =
-  (* TODO can't find a good solution. Tried Async, Lwt and Thread *)
-  Option.some @@ f ()
-;;
-
 (* synchronized read/write to the state *)
 let read_state (t : t) : GS.t option =
   Mutex.lock t.state_lock;
@@ -96,11 +88,10 @@ let add_game_observer t observer =
 (** EFFECT: update [t.observers] to remove the observer(s) which time out *)
 let inform_all_observers t event : unit=
   let remaining_observers = 
-    List.filter_map ~f:Fun.id @@
-    List.map t.observers
+    List.filter t.observers
       ~f:(fun observer -> 
-          Option.map ~f:(Fun.const observer) @@
-          timeout (fun () -> observer event) t.conf.inform_observer_timeout_s)
+          Option.is_some @@ Timeout_util.call_with_timeout_ms
+            (fun () -> observer event) t.conf.inform_observer_timeout_ms)
   in t.observers <- remaining_observers
 ;;
 
@@ -123,9 +114,9 @@ let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
     ~f:(fun state ->
         let color = GS.get_current_player state |> PS.get_player_color in
         let player = get_player_with_color t color in
-        Core.ignore @@ timeout 
+        Core.ignore @@ Timeout_util.call_with_timeout_ms
           (fun () -> player#inform_disqualified ()) 
-          t.conf.inform_disqualified_timeout_s;
+          t.conf.inform_disqualified_timeout_ms;
         (match why with
          | `Cheat -> t.cheaters <- color::t.cheaters
          | `Fail  -> t.failed   <- color::t.failed);
@@ -150,7 +141,8 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let color = PS.get_player_color player_state in
   let player = get_player_with_color t color in
   let response = Option.join @@
-    timeout (fun () -> player#place_penguin gs) t.conf.placement_timeout_s in
+    Timeout_util.call_with_timeout_ms
+      (fun () -> player#place_penguin gs) t.conf.placement_timeout_ms in
   match response with (* same treatment to timeout and communication failure *) 
   | None -> handle_current_player_failed t
   | Some(pos) ->
@@ -200,7 +192,8 @@ let get_player_action (t : t) (player : Player.t) (tree : GT.t)
   | [(Action.Skip, _);] ->  Option.some Action.Skip
   | _ ->
     Option.join @@
-    timeout (fun () -> player#take_turn tree) t.conf.turn_action_timeout_s
+    Timeout_util.call_with_timeout_ms
+      (fun () -> player#take_turn tree) t.conf.turn_action_timeout_ms
 
 (** EFFECT: update [t.cheaters] or [t.failed] if current player cheats/fails.
     RETURN: final game tree or [None] if all players are removed. *)
@@ -240,8 +233,8 @@ let handle_color_assignment_phase t : unit =
   let handle_current_player state : GS.t option =
     let color = GS.get_current_player state |> PS.get_player_color in
     let player = get_player_with_color t color in
-    let result = timeout 
-        (fun () -> player#assign_color color) t.conf.assign_color_timeout_s in
+    let result = Timeout_util.call_with_timeout_ms
+        (fun () -> player#assign_color color) t.conf.assign_color_timeout_ms in
     match result with
     | None -> handle_current_player_failed t
     | _ -> Some(GS.rotate_to_next_player state)
@@ -320,11 +313,11 @@ let init_referee_exn t players board_config =
 ;;
 
 let default_timeout_config =
-  { placement_timeout_s = 10
-  ; turn_action_timeout_s = 10
-  ; assign_color_timeout_s = 10
-  ; inform_disqualified_timeout_s = 10
-  ; inform_observer_timeout_s = 10
+  { placement_timeout_ms = 10
+  ; turn_action_timeout_ms = 10
+  ; assign_color_timeout_ms = 10
+  ; inform_disqualified_timeout_ms = 10
+  ; inform_observer_timeout_ms = 10
   }
 ;;
 
