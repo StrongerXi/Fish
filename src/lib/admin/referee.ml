@@ -140,7 +140,8 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let player_state = GS.get_current_player gs in
   let color = PS.get_player_color player_state in
   let player = get_player_with_color t color in
-  let response = Option.join @@
+  let response =
+    Option.join @@ (* timeout and communication failure are treated the same *)
     Timeout_util.call_with_timeout_ms
       (fun () -> player#place_penguin gs) t.conf.placement_timeout_ms in
   match response with (* same treatment to timeout and communication failure *) 
@@ -191,7 +192,7 @@ let get_player_action (t : t) (player : Player.t) (tree : GT.t)
   match GT.get_subtrees tree with
   | [(Action.Skip, _);] ->  Option.some Action.Skip
   | _ ->
-    Option.join @@
+    Option.join @@ (* timeout and communication failure are treated the same *)
     Timeout_util.call_with_timeout_ms
       (fun () -> player#take_turn tree) t.conf.turn_action_timeout_ms
 
@@ -313,11 +314,11 @@ let init_referee_exn t players board_config =
 ;;
 
 let default_timeout_config =
-  { placement_timeout_ms = 10
-  ; turn_action_timeout_ms = 10
-  ; assign_color_timeout_ms = 10
-  ; inform_disqualified_timeout_ms = 10
-  ; inform_observer_timeout_ms = 10
+  { placement_timeout_ms = 3000
+  ; turn_action_timeout_ms = 3000
+  ; assign_color_timeout_ms = 3000
+  ; inform_disqualified_timeout_ms = 3000
+  ; inform_observer_timeout_ms = 3000
   }
 ;;
 
