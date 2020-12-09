@@ -81,23 +81,26 @@ let allocate_players_to_games (players : Player.t list) : Player.t list list =
   let rec loop (players : Player.t list) (groups : Player.t list list) =
     if (List.length players) < Referee.C.min_num_of_players
     then
-      let prev_group = List.hd_exn groups in
-      let new_group = ((List.hd_exn prev_group)::players) in
-      new_group::((List.tl_exn prev_group)::groups)
+      let prev_group  = List.hd_exn groups in
+      let prev_groups = List.tl_exn groups in
+      let new_group   = ((List.hd_exn prev_group)::players) in
+      new_group::((List.tl_exn prev_group)::prev_groups)
     else
     if (List.length players) > Referee.C.max_num_of_players
     then
       let group, players = List.split_n players Referee.C.max_num_of_players in
       loop players (group::groups)
-    else players::groups
+    else players::groups (* [List.length players] ∈ [min, max] *)
   in
   if (List.length players < Referee.C.min_num_of_players)
   then failwith "Insufficient # of players for game allocation"
   else loop players []
 ;;
 
-(* This is where parallelization can be implemented *)
+(* [t.active_players] will be winners from each round
+   This is where parallelization may be implemented *)
 let run_games (t : t) (groups : Player.t list list) : t =
+  let t = { t with active_players = [] } in
   List.fold_left groups ~init:t ~f:(fun t players ->
       let referee = Referee.create () in
       let res = Referee.run_game referee players t.board_conf in
