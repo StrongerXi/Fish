@@ -18,15 +18,15 @@ let board_config = BoardConf.create ~width:5 ~height:5
 ;;
 
 let parse_port (args : string array) : int option = 
-  if (Array.length args) <> 1
+  if (Array.length args) <> 2
   then None
-  else int_of_string_opt args.(0)
+  else int_of_string_opt args.(1)
 ;;
 
 (* Start up a server for fish game at specified port *)
 let () =
   match parse_port @@ Sys.get_argv () with
-  | None -> Printf.printf "Please specify a single integer for port"
+  | None -> Printf.printf "Please specify a single integer for port\n"
   | Some(port) ->
     let players = Signup.sign_up signup_config port in
     if (List.length players) >= signup_config.min_num_of_players
