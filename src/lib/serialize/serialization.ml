@@ -255,6 +255,12 @@ let from_bool b = `Bool b
 let to_bool = YB.Util.to_bool_option
 ;;
 
+let from_int b = `Int b
+;;
+
+let to_int = YB.Util.to_int_option
+;;
+
 let from_json_string str =
   try
     Some(YB.from_string str)

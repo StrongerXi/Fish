@@ -38,6 +38,9 @@ val to_string   : t -> string option
 val from_bool : bool -> t
 val to_bool   : t -> bool option
 
+val from_int : int -> t
+val to_int   : t -> int option
+
 val from_json_string : string -> t option
 val to_json_string : t -> string
 
