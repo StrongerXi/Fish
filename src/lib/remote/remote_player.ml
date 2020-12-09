@@ -47,13 +47,14 @@ module Call = struct
     let open Option.Let_syntax in
     let name_with_args : (string * S.t list) option =
       match%bind S.to_list s Fun.id |> Result.ok with
-      | func_name_t::args -> 
+      | [func_name_t; args_t] ->
         let%bind func_name = S.to_string func_name_t in
-        return (func_name, args)
+        let%bind arg_ts = S.to_list args_t Fn.id |> Result.ok in
+        return (func_name, arg_ts)
       | _ -> None
     in
     match%bind name_with_args with
-    | s, [] when String.(s = start_name) -> return Start
+    | s, [_] when String.(s = start_name) -> return Start
     | s, [color_s] when String.(s = play_as_name) ->
       let%bind color = S.to_color color_s |> Result.ok in
       return (PlayAs color)
@@ -171,7 +172,7 @@ let interact_with_proxy_chans (player : Player.t)
   let inputs : S.t Stream.t = S.stream_from_channel ic in
   let rec loop () : unit =
     Option.iter (Call.deserialize @@ Stream.next inputs)
-      ~f:(fun call -> if handle_remote_call player call oc then loop ())
+      ~f:(fun call -> if not (handle_remote_call player call oc) then loop ())
   in
   write_to_outchan_now oc @@ player#get_name();
   loop ();
@@ -182,7 +183,7 @@ let interact_with_proxy player ip port =
   let sockaddr = Unix.ADDR_INET(server_addr, port) in 
   let ic, oc = Unix.open_connection sockaddr in
   interact_with_proxy_chans player ic oc;
+  (* sends EOF to server, not sure why ic is input, also closes oc... *)
   Unix.shutdown_connection ic;
   In_channel.close ic;
-  Out_channel.close oc;
 ;;
