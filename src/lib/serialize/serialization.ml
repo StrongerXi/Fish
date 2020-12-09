@@ -242,23 +242,28 @@ let to_list t deserializer =
   | _ -> Result.fail "Expected an array of json values"
 ;;
 
+(* Helper to catch type error during parsing *)
+let catch_type_error (f : t -> 'a) (t : t) : 'a option =
+  try Some(f t)
+  with YB.Util.Type_error(_) -> None
+;;
 
 let from_string s = `String s
 ;;
 
-let to_string = YB.Util.to_string_option
+let to_string t = catch_type_error YB.Util.to_string t
 ;;
 
 let from_bool b = `Bool b
 ;;
 
-let to_bool = YB.Util.to_bool_option
+let to_bool t = catch_type_error YB.Util.to_bool t
 ;;
 
 let from_int b = `Int b
 ;;
 
-let to_int = YB.Util.to_int_option
+let to_int t = catch_type_error YB.Util.to_int t
 ;;
 
 let from_json_string str =
