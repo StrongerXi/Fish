@@ -80,7 +80,7 @@ let inform_players_tournament_start (t : t) : t =
 let allocate_players_to_games (players : Player.t list) : Player.t list list =
   let rec loop (players : Player.t list) (groups : Player.t list list) =
     if (List.length players) < Referee.C.min_num_of_players
-    then
+    then (* TODO ASSUME min_num_of_players= 2. Algorithm is dicated by specs. *)
       let prev_group  = List.hd_exn groups in
       let prev_groups = List.tl_exn groups in
       let new_group   = ((List.hd_exn prev_group)::players) in
@@ -110,7 +110,7 @@ let run_games (t : t) (groups : Player.t list list) : t =
                all_losers = (res.rest @ t.all_losers); })
 ;;
 
-(* [t.active_players] become final winners *)
+(* [t.active_players] who responded become final winners *)
 let inform_and_compile_tournament_result (t : t) : Tournament_result.t =
   let final_winners, failed_winners = call_all_players_timeout t.active_players
       (fun p -> p#inform_tournament_result true)
