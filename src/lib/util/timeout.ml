@@ -6,7 +6,7 @@ exception Timeout
 let call_with_timeout_ms (thunk : unit -> 'a) (ms : int) : 'a option =
   Core.ignore @@ (* time out once after [ms] ms *)
   Unix.setitimer Unix.ITIMER_REAL { Unix.it_interval = 0.0;
-                                    it_value = (float_of_int ms) };
+                                    it_value = (float_of_int ms) /. 1000. };
   Sys.set_signal Sys.sigalrm (Sys.Signal_handle (fun _ -> raise Timeout));
   try 
     let res = Some(thunk()) in
