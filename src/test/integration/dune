@@ -1,4 +1,4 @@
 (executables
- (names xboard xstate xtree xref xserver)
+ (names xboard xstate xtree xref xserver xclient)
  (libraries fish core)
  (preprocess (pps ppx_compare ppx_let )))
