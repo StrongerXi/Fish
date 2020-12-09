@@ -155,7 +155,7 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
         GS.rotate_to_next_player @@ GS.place_penguin gs color pos in
       inform_all_observers t (PenguinPlacement(new_state, color, pos));
       Option.some new_state
-    else handle_current_player_failed t
+    else handle_current_player_cheated t
 ;;
 
 (** EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
