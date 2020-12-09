@@ -29,11 +29,12 @@ module Call = struct
 
   let to_string (t : t) : string =
     let helper (func_name : string) (args : S.t list) : string =
-      let arr = (S.from_string func_name)::args in
+      let arr = [S.from_string func_name;
+                 S.from_list args Fun.id] in
       S.from_list arr Fun.id |> S.to_json_string
     in
     match t with
-    | Start         -> helper start_name []
+    | Start         -> helper start_name [S.from_bool true]
     | PlayAs(color) -> helper play_as_name [(S.from_color color)]
     | PlayWith(cs)  -> helper play_with_name [(S.from_list cs S.from_color)]
     | Setup(state)  -> helper setup_name[(S.from_game_state state)]
@@ -91,21 +92,15 @@ let create_proxy_player
   inherit Player.t name age
   val inputs : S.t Stream.t = S.stream_from_channel ic
   val mutable first_setup : bool = true
-  (* Return colors of all players in [state] excluding [color] *)
-  val colors_excluding = fun (state : GS.t) (color : PC.t) ->
-    state |> GS.get_ordered_players
-    |> List.map ~f:PS.get_player_color
-    |> List.filter ~f:(fun c -> not @@ PC.equal c color)
 
   method place_penguin (state : GS.t) =
     if first_setup
-    then (* Our player interface doesn't have "play-with", so we simulate it *)
-      (let my_color = GS.get_current_player state |> PS.get_player_color in
-       let other_colors = colors_excluding state my_color in
-       self#send_now @@ Call.to_string (Call.PlayWith other_colors);
-       first_setup <- false);
-    self#send_now @@ Call.to_string (Call.Setup state);
-    Stream.next inputs |> S.to_pos |> Result.ok
+    then
+      (first_setup <- false;
+       if self#play_with state
+       then self#place_penguin_impl state
+       else None)
+    else self#place_penguin_impl state
 
   method take_turn (tree : GT.t) =
     self#send_now @@ Call.to_string (Call.TakeTurn(GT.get_state tree, []));
@@ -113,7 +108,8 @@ let create_proxy_player
 
   method! inform_tournament_start () =
     self#send_now @@ Call.to_string Call.Start;
-    self#expect_void_str ()
+    let b = self#expect_void_str () in
+    b
 
   method! assign_color (color : PC.t) =
     first_setup <- true; (* a new game has started *)
@@ -126,6 +122,20 @@ let create_proxy_player
 
   method! inform_tournament_result (did_win : bool) =
     self#send_now @@ Call.to_string (Call.End did_win);
+    self#expect_void_str ()
+
+  method private place_penguin_impl (state : GS.t) : Pos.t option =
+    self#send_now @@ Call.to_string (Call.Setup state);
+    Stream.next inputs |> S.to_pos |> Result.ok
+
+  (* Our player interface doesn't have "play-with", so we simulate it *)
+  method private play_with (state : GS.t) : bool =
+    let my_color = GS.get_current_player state |> PS.get_player_color in
+    let other_colors = GS.get_ordered_players state
+                       |> List.map ~f:PS.get_player_color
+                       |> List.filter ~f:(fun c -> not @@ PC.equal c my_color)
+    in
+    self#send_now @@ Call.to_string (Call.PlayWith other_colors);
     self#expect_void_str ()
 
   (* Return [true] if we receive a void string back from [inputs] *)
@@ -146,33 +156,32 @@ let handle_remote_call
   let send_void () : unit =
     write_to_outchan_now oc @@ (S.from_string Call.ackn_msg |> S.to_json_string);
   in
+  (match call with
+   | Start -> if player#inform_tournament_start() then send_void ();
+   | PlayAs(color) -> if player#assign_color color then send_void ();
+   | PlayWith(_) -> send_void (); (* not implemented in our codebase *)
+   | Setup(state) ->
+     Option.iter (player#place_penguin state) ~f:(fun pos ->
+         write_to_outchan_now oc @@ (S.from_pos pos |> S.to_json_string));
+   | TakeTurn(state, _) ->
+     Option.iter (player#take_turn @@ GT.create state) ~f:(fun act ->
+         write_to_outchan_now oc @@ (S.from_action act |> S.to_json_string));
+   | End(did_win) ->
+     if player#inform_tournament_result did_win then send_void ());
   match call with
-  | Start         -> 
-    Core.ignore @@ player#inform_tournament_start();
-    send_void (); false
-  | PlayAs(color) ->
-    Core.ignore @@ player#assign_color color;
-    send_void (); false
-  | PlayWith(_)  -> send_void (); false (* not implemented in our codebase *)
-  | Setup(state)  ->
-    Option.iter (player#place_penguin state) ~f:(fun pos ->
-        write_to_outchan_now oc @@ (S.from_pos pos |> S.to_json_string));
-    false
-  | TakeTurn(state, _) ->
-    Option.iter (player#take_turn @@ GT.create state) ~f:(fun act ->
-        write_to_outchan_now oc @@ (S.from_action act |> S.to_json_string));
-    false
-  | End(did_win) ->
-    Core.ignore @@ player#inform_tournament_result did_win;
-    send_void (); true
+  | End(_) -> true
+  | _ -> false
 ;;
 
 let interact_with_proxy_chans (player : Player.t)
     (ic : In_channel.t) (oc : Out_channel.t) : unit =
   let inputs : S.t Stream.t = S.stream_from_channel ic in
   let rec loop () : unit =
-    Option.iter (Call.deserialize @@ Stream.next inputs)
-      ~f:(fun call -> if not (handle_remote_call player call oc) then loop ())
+    let next_s = Stream.next inputs in
+    match Call.deserialize next_s with
+    | None -> Printf.printf "Invalid remote call message: %s\n"
+                (S.to_json_string next_s);
+    | Some(call) -> if not (handle_remote_call player call oc) then loop ()
   in
   write_to_outchan_now oc @@ player#get_name();
   loop ();
