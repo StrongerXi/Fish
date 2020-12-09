@@ -22,7 +22,7 @@ let get_player_color t = t.color
 ;;
 
 let set_score t score =
-  if score > 0
+  if score >= 0
   then { t with score }
   else failwith "score must be non-negative"
 ;;
