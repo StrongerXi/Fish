@@ -104,12 +104,11 @@ let create_proxy_player
 
   method take_turn (tree : GT.t) =
     self#send_now @@ Call.to_string (Call.TakeTurn(GT.get_state tree, []));
-    Stream.next inputs |> S.to_action |> Result.ok
+    Option.bind ~f:(Fn.compose Result.ok S.to_action) @@ self#get_next_input()
 
   method! inform_tournament_start () =
     self#send_now @@ Call.to_string Call.Start;
-    let b = self#expect_void_str () in
-    b
+    self#expect_void_str ()
 
   method! assign_color (color : PC.t) =
     first_setup <- true; (* a new game has started *)
@@ -124,9 +123,14 @@ let create_proxy_player
     self#send_now @@ Call.to_string (Call.End did_win);
     self#expect_void_str ()
 
+  (* return [None] _any_ exception is raised *)
+  method private get_next_input () : S.t option =
+    try Some(Stream.next inputs)
+    with _ -> None (* catch any error *)
+
   method private place_penguin_impl (state : GS.t) : Pos.t option =
     self#send_now @@ Call.to_string (Call.Setup state);
-    Stream.next inputs |> S.to_pos |> Result.ok
+    Option.bind ~f:(Fn.compose Result.ok S.to_pos) @@ self#get_next_input()
 
   (* Our player interface doesn't have "play-with", so we simulate it *)
   method private play_with (state : GS.t) : bool =
@@ -140,12 +144,14 @@ let create_proxy_player
 
   (* Return [true] if we receive a void string back from [inputs] *)
   method private expect_void_str () : bool =
-    match S.to_string @@ Stream.next inputs with
+    match Option.bind ~f:S.to_string @@ self#get_next_input() with
     | Some(s) when String.(s = Call.ackn_msg) -> true
     | _ -> false
 
-  (* Write given string to [oc] without delay from buffering *)
-  method private send_now : string -> unit = write_to_outchan_now oc
+  (* Write [msg] to [oc] immediately; catch and ignore _any_ exception raised *)
+  method private send_now (msg : string) : unit =
+    try write_to_outchan_now oc msg
+    with _ -> ()
 end
 
 
