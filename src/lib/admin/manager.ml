@@ -59,7 +59,7 @@ let is_same_set_of_players (ps1 : Player.t list) (ps2 : Player.t list) : bool =
 let call_all_players_timeout (players : Player.t list) (f : Player.t -> bool) (timeout_ms : int) : 
   (Player.t list * Player.t list) = (* responded players and others *)
   List.fold_left players ~init:([], []) ~f:(fun (good, bad) p ->
-      match Timeout_util.call_with_timeout_ms (fun () -> f p) timeout_ms with
+      match Timeout.call_with_timeout_ms (fun () -> f p) timeout_ms with
       | Some(true) -> (p::good, bad)
       | _ -> (good, p::bad))
 ;;

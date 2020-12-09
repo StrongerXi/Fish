@@ -1,5 +1,6 @@
 open !Core
 module Mutex = Error_checking_mutex
+module Timeout = Util.Timeout
 
 module Game_result = struct
   type t =
@@ -90,7 +91,7 @@ let inform_all_observers t event : unit=
   let remaining_observers = 
     List.filter t.observers
       ~f:(fun observer -> 
-          Option.is_some @@ Timeout_util.call_with_timeout_ms
+          Option.is_some @@ Timeout.call_with_timeout_ms
             (fun () -> observer event) t.conf.inform_observer_timeout_ms)
   in t.observers <- remaining_observers
 ;;
@@ -114,7 +115,7 @@ let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
     ~f:(fun state ->
         let color = GS.get_current_player state |> PS.get_player_color in
         let player = get_player_with_color t color in
-        Core.ignore @@ Timeout_util.call_with_timeout_ms
+        Core.ignore @@ Timeout.call_with_timeout_ms
           (fun () -> player#inform_disqualified ()) 
           t.conf.inform_disqualified_timeout_ms;
         (match why with
@@ -142,7 +143,7 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let player = get_player_with_color t color in
   let response =
     Option.join @@ (* timeout and communication failure are treated the same *)
-    Timeout_util.call_with_timeout_ms
+    Timeout.call_with_timeout_ms
       (fun () -> player#place_penguin gs) t.conf.placement_timeout_ms in
   match response with (* same treatment to timeout and communication failure *) 
   | None -> handle_current_player_failed t
@@ -193,7 +194,7 @@ let get_player_action (t : t) (player : Player.t) (tree : GT.t)
   | [(Action.Skip, _);] ->  Option.some Action.Skip
   | _ ->
     Option.join @@ (* timeout and communication failure are treated the same *)
-    Timeout_util.call_with_timeout_ms
+    Timeout.call_with_timeout_ms
       (fun () -> player#take_turn tree) t.conf.turn_action_timeout_ms
 
 (** EFFECT: update [t.cheaters] or [t.failed] if current player cheats/fails.
@@ -234,7 +235,7 @@ let handle_color_assignment_phase t : unit =
   let handle_current_player state : GS.t option =
     let color = GS.get_current_player state |> PS.get_player_color in
     let player = get_player_with_color t color in
-    let result = Timeout_util.call_with_timeout_ms
+    let result = Timeout.call_with_timeout_ms
         (fun () -> player#assign_color color) t.conf.assign_color_timeout_ms in
     match result with
     | Some(true) -> Some(GS.rotate_to_next_player state)
