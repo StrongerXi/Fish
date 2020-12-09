@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Get the absolute path to the directory of this script
+SCRIPT_DIR=$(dirname "$BASH_SOURCE")
+if [ "$#" -eq 0 ]; then 
+  echo "Usage: ${BASH_SOURCE} <testing harness name> <arg0> ..."
+  exit 0
+fi
+
+# e.g. "./src/test/integration/xserver"
+SOURCE_WITHOUT_SUFFIX=$SCRIPT_DIR/src/test/integration/$1
+if [ ! -f $SOURCE_WITHOUT_SUFFIX.ml ]; then
+  echo "Invalid testing harness: ${SOURCE_WITHOUT_SUFFIX}.ml does not exist"
+else
+  dune exec $SOURCE_WITHOUT_SUFFIX.exe ${@:2}
+fi
