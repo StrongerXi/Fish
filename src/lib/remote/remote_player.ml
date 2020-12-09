@@ -134,9 +134,9 @@ let create_proxy_player
 
   (* Our player interface doesn't have "play-with", so we simulate it *)
   method private play_with (state : GS.t) : bool =
-    let my_color = GS.get_current_player state |> PS.get_player_color in
+    let my_color = GS.get_current_player state |> PS.get_color in
     let other_colors = GS.get_ordered_players state
-                       |> List.map ~f:PS.get_player_color
+                       |> List.map ~f:PS.get_color
                        |> List.filter ~f:(fun c -> not @@ PC.equal c my_color)
     in
     self#send_now @@ Call.to_string (Call.PlayWith other_colors);

@@ -113,7 +113,7 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
 let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
   Option.bind (read_state t)
     ~f:(fun state ->
-        let color = GS.get_current_player state |> PS.get_player_color in
+        let color = GS.get_current_player state |> PS.get_color in
         let player = get_player_with_color t color in
         Core.ignore @@ Timeout.call_with_timeout_ms
           (fun () -> player#inform_disqualified ()) 
@@ -139,7 +139,7 @@ let handle_current_player_failed (t : t) : GS.t option =
 let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let board = GS.get_board_copy gs in
   let player_state = GS.get_current_player gs in
-  let color = PS.get_player_color player_state in
+  let color = PS.get_color player_state in
   let player = get_player_with_color t color in
   let response =
     Option.join @@ (* timeout and communication failure are treated the same *)
@@ -202,7 +202,7 @@ let get_player_action (t : t) (player : Player.t) (tree : GT.t)
 let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
   let subtrees = GT.get_subtrees tree in
   let state = GT.get_state tree in
-  let color = PS.get_player_color @@ GS.get_current_player state in
+  let color = GS.get_current_player state |> PS.get_color in
   let player = get_player_with_color t color in
   match get_player_action t player tree with
   | None -> Option.map ~f:GT.create @@ handle_current_player_failed t
@@ -233,7 +233,7 @@ let handle_turn_action_phase (t : t) : unit =
 let handle_color_assignment_phase t : unit =
   (* assign color to current player and return resulting game state *)
   let handle_current_player state : GS.t option =
-    let color = GS.get_current_player state |> PS.get_player_color in
+    let color = GS.get_current_player state |> PS.get_color in
     let player = get_player_with_color t color in
     let result = Timeout.call_with_timeout_ms
         (fun () -> player#assign_color color) t.conf.assign_color_timeout_ms in
@@ -291,11 +291,11 @@ let collect_result t : Game_result.t =
                     |> Option.value ~default:0 in
     let winners = 
       List.filter ~f:(fun p -> (PS.get_score p) = max_score) players
-      |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
+      |> List.map ~f:(Fn.compose (get_player_with_color t) PS.get_color)
     in
     let rest = 
       List.filter ~f:(fun p -> (PS.get_score p) <> max_score) players
-      |> List.map ~f:(fun p -> get_player_with_color t @@ PS.get_player_color p)
+      |> List.map ~f:(Fn.compose (get_player_with_color t) PS.get_color)
     in
     { winners; rest; failed; cheaters; }
 ;;

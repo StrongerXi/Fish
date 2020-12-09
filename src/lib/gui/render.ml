@@ -75,7 +75,7 @@ let render_penguin (penguin : Penguin.t) (color : PC.t) (height : int) : unit =
 
 (** Render relavent information associated with [player] *)
 let render_player (player : PS.t) (height : int) : unit =
-  let color = PS.get_player_color player in
+  let color = PS.get_color player in
   PS.get_penguins player |> List.iter
     (fun penguin -> render_penguin penguin color height);
 ;;

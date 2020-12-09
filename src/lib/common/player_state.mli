@@ -19,7 +19,7 @@ module Player_color : sig
 end
 
 val create : Player_color.t -> t
-val get_player_color : t -> Player_color.t
+val get_color : t -> Player_color.t
 
 (** Errors if score is negative *)
 val set_score : t -> int -> t

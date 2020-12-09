@@ -55,40 +55,39 @@ module Turn_actor = struct
 
   (* This can break ties in moves with same score *)
   let act_compare (act1 : Action.t) (act2 : Action.t) : int =
-    match act1, act2 with
-    | (Action.Move(m1), Action.Move(m2)) -> Action.Move.compare m1 m2
+    match act1, act2 with (* favor top-left move *)
+    | (Action.Move(m1), Action.Move(m2)) -> ~-(Action.Move.compare m1 m2)
     | _ -> 0 (* treat all other types of action pairs as "equal" *)
   ;;
 
   let scored_act_compare (act1, score1) (act2, score2) : int =
     if score1 = score2
-    then ~-(act_compare act1 act2) (* favor top-left move *)
+    then act_compare act1 act2
     else Int.compare score1 score2
   ;;
 
   let use_minimax turns gt =
-    let my_color =
-      gt |> GT.get_state |> GS.get_current_player |> PS.get_player_color in
+    let my_color = gt |> GT.get_state |> GS.get_current_player |> PS.get_color in
     let current_player_is_me (gt : GT.t) : bool =
-      let current_player = GT.get_state gt |> GS.get_current_player in
-      PS.Player_color.equal my_color @@ PS.get_player_color current_player in
+      GT.get_state gt |> GS.get_current_player |> PS.get_color
+      |> PS.Player_color.equal my_color
+    in
     let get_my_player_score (gt : GT.t) : int =
-      PS.get_score @@ GS.get_player_with_color (GT.get_state gt) my_color in
+      PS.get_score @@ GS.get_player_with_color (GT.get_state gt) my_color
+    in
     (* Evaluate [gt] from the perspective of player with [color], by looking
      * ahead as many steps as needed so that the player takes at least 
      * [turns_left] more turns. Evaluate based on the minimax algorithm and
      * player score *)
     let rec evaluate_tree (turns_left : int) (gt : GT.t) : int =
-      if turns_left = 0
-      then get_my_player_score gt
+      if turns_left = 0 then get_my_player_score gt
       else 
         let score_selector, next_turns_left = 
           if current_player_is_me gt
           then (List.max_elt ~compare:Int.compare, turns_left - 1)
           else (List.min_elt ~compare:Int.compare, turns_left) in
-        let scores =  
-          GT.get_subtrees gt 
-          |> List.map ~f:(fun (_, gt) -> evaluate_tree next_turns_left gt) in
+        let scores = List.map (GT.get_subtrees gt)
+            ~f:(fun (_, gt) -> evaluate_tree next_turns_left gt) in
         match score_selector scores with (* [None] means end of game *)
         | None -> get_my_player_score gt
         | Some(score) -> score

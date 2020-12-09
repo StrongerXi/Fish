@@ -92,7 +92,7 @@ let to_color t : (Player_color.t, string) result =
 
 
 let from_player (player : Player_state.t) : t =
-  let color_t = from_color @@ Player_state.get_player_color player
+  let color_t = from_color @@ Player_state.get_color player
   and score_t = `Int(Player_state.get_score player)
   and pengs_t = `List(List.map ~f:from_penguin @@ Player_state.get_penguins player)
   in

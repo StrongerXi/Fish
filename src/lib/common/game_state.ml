@@ -25,7 +25,7 @@ module Player_list = struct
   (** Return [None] if no player has [color] in [t] *)
   let get_player_with_color t color : PS.t option  = 
     List.find t.players
-      ~f:(fun p -> Player_color.equal color (PS.get_player_color p))
+      ~f:(fun p -> Player_color.equal color (PS.get_color p))
   ;;
 
   (** ERROR: if no player has [color] in [t] *)
@@ -34,7 +34,7 @@ module Player_list = struct
       match players with
       | [] -> failwith "No player has given color in the player list"
       | p::players ->
-        if Player_color.equal color (PS.get_player_color p)
+        if Player_color.equal color (PS.get_color p)
         then checked @ players
         else remove_in_players players (p::checked)
     in
@@ -77,7 +77,7 @@ module Player_list = struct
       match players with
       | [] -> failwith "No player has given color"
       | p::players ->
-        if Player_color.equal color @@ PS.get_player_color p
+        if Player_color.equal color @@ PS.get_color p
         then (PS.add_penguin p penguin)::players
         else p::(update_players players)
     in
@@ -88,7 +88,7 @@ module Player_list = struct
 
   (** Discouraged unless you have good reason and know what you are doing *)
   let from_players (players : PS.t list) : (t, string) result = 
-    let colors = List.map ~f:PS.get_player_color players in
+    let colors = List.map ~f:PS.get_color players in
     if List.contains_dup ~compare:Player_color.compare colors
     then Result.fail "Players must have distinct colors"
     else Result.return { players }
@@ -190,8 +190,8 @@ let from_board_players board players =
        |> List.exists ~f:Tile.is_hole
     then Result.fail "No penguin should reside on a hole"
     else
-    let start = PS.get_player_color start in
-    let nexts = List.map ~f:PS.get_player_color nexts in
+    let start = PS.get_color start in
+    let nexts = List.map ~f:PS.get_color nexts in
     let order = CQ.create start nexts in
     return { board; players = player_list; order }
 ;;

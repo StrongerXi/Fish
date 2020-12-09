@@ -18,7 +18,7 @@ type t =
 let create color = { color; score = 0; penguins = [] }
 ;;
 
-let get_player_color t = t.color
+let get_color t = t.color
 ;;
 
 let set_score t score =

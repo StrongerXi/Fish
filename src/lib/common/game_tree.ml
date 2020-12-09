@@ -39,7 +39,7 @@ let compute_subtrees_with_moves t : (Action.t * t) list =
     EFFECT: Update the [subtrees] field from [t] to [tk] to "stitch them up"
     If it didn't generate up to a moveable subtree, [t.subtree] is [Some[]] *)
 let generate_until_moveable_subtree t : unit =
-  let start_color = GS.get_current_player t.state |> PS.get_player_color in
+  let start_color = GS.get_current_player t.state |> PS.get_color in
   (* if _next_ (not current) player in [t] has color [start_color], stop. *)
   let rec generate_to_moveable_tree_until_start t : t option =
     match compute_subtrees_with_moves t with
@@ -47,7 +47,7 @@ let generate_until_moveable_subtree t : unit =
     | [] -> (* current player in [t] can't move, skip it *)
       let open Option.Let_syntax in
       let next_gs = GS.rotate_to_next_player t.state in
-      let next_color = GS.get_current_player next_gs |> PS.get_player_color in
+      let next_color = GS.get_current_player next_gs |> PS.get_color in
       let next_t = { t with state = next_gs } in
       let%bind subtree =
         if PS.Player_color.equal next_color start_color
