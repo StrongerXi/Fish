@@ -17,7 +17,10 @@ class ai_player name = object
 end
 
 (** Simulate indefinite hanging *)
-let rec run_forever () = run_forever ()
+let block_for_a_long_time () : 'a =
+  Unix.sleep 100000;
+  failwith "Unreachable code";
+;;
 
 let get_player_fail_at_placement name = object
   inherit ai_player name
@@ -31,7 +34,7 @@ end
 
 let get_player_hang_at_placement name = object
   inherit ai_player name
-  method! place_penguin _ = run_forever ()
+  method! place_penguin _ = block_for_a_long_time ()
 end
 
 let get_player_fail_at_turn_action name = object
@@ -49,16 +52,16 @@ end
 
 let get_player_hang_at_turn_action name = object
   inherit ai_player name
-  method! take_turn _ = run_forever ()
+  method! take_turn _ = block_for_a_long_time ()
 end
 
 let get_player_hang_at_color_assignment name = object
   inherit ai_player name
-  method! assign_color _ = run_forever ()
+  method! assign_color _ = block_for_a_long_time ()
 end
 
 let get_player_hang_at_color_assignment_and_disqualification name = object
   inherit ai_player name
-  method! assign_color _ = run_forever ()
-  method! inform_disqualified () = run_forever ()
+  method! assign_color _ = block_for_a_long_time ()
+  method! inform_disqualified () = block_for_a_long_time ()
 end
