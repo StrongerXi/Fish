@@ -1,4 +1,15 @@
 (tests
-  (names referee_test mock_players)
-  (libraries ounit2 fish)
+  (names referee_test)
+  (modules referee_test)
+  (libraries ounit2 core fish mock_players util)
 )
+
+(library
+  (name mock_players)
+  (modules mock_players)
+  (libraries fish))
+
+(library
+  (name util)
+  (modules util)
+  (libraries ounit2 core fish))
