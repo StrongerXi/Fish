@@ -110,43 +110,42 @@ let get_player_with_color (t : t) (color : Color.t) : Player.t =
 
 (** EFFECT: Update [t.cheaters] or [t.failed] if [t.state] is populated.
     RETURN: the new game state, or [None] if all players are removed. *)
-let disqualify_current_player (t : t) (why : [`Cheat | `Fail]) : GS.t option =
+let disqualify_current_player (t : t) (color : Color.t) (why : [`Cheat | `Fail])
+  : GS.t option =
   Option.bind (read_state t)
     ~f:(fun state ->
-        let color = GS.get_current_player state |> PS.get_color in
         let player = get_player_with_color t color in
-        Core.ignore @@ Timeout.call_with_timeout_ms
-          (fun () -> player#inform_disqualified ()) 
-          t.conf.inform_disqualified_timeout_ms;
-        (match why with
-         | `Cheat -> t.cheaters <- color::t.cheaters
-         | `Fail  -> t.failed   <- color::t.failed);
         let new_state = GS.remove_current_player state in
+        (match why with (* informing failed player could be dangerous *)
+         | `Fail  -> t.failed <- color::t.failed
+         | `Cheat -> t.cheaters <- color::t.cheaters;
+           Core.ignore @@ Timeout.call_with_timeout_ms
+             (fun () -> player#inform_disqualified ())
+             t.conf.inform_disqualified_timeout_ms);
         inform_all_observers t (Disqualify(new_state, color));
         new_state)
 ;;
 
-let handle_current_player_cheated (t : t) : GS.t option =
-  disqualify_current_player t `Cheat
+let handle_player_cheated (t : t) (color : Color.t) : GS.t option =
+  disqualify_current_player t color `Cheat
 ;;
 
-let handle_current_player_failed (t : t) : GS.t option =
-  disqualify_current_player t `Fail
+let handle_player_failure (t : t) (color : Color.t) : GS.t option =
+  disqualify_current_player t color `Fail
 ;;
 
 (** EFFECT: update [t.cheaters] or [t.failed] if current player cheats/fails.
     RETURN: final game state or [None] if all players are removed. *)
 let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
   let board = GS.get_board_copy gs in
-  let player_state = GS.get_current_player gs in
-  let color = PS.get_color player_state in
+  let color = GS.get_current_player gs |> PS.get_color in
   let player = get_player_with_color t color in
   let response =
     Option.join @@ (* timeout and communication failure are treated the same *)
     Timeout.call_with_timeout_ms
       (fun () -> player#place_penguin gs) t.conf.placement_timeout_ms in
   match response with (* same treatment to timeout and communication failure *) 
-  | None -> handle_current_player_failed t
+  | None -> handle_player_failure t color
   | Some(pos) ->
     if Board.within_board board pos && 
        not @@ Tile.is_hole @@ Board.get_tile_at board pos
@@ -155,7 +154,7 @@ let handle_current_player_penguin_placement (t : t) (gs : GS.t) : GS.t option =
         GS.rotate_to_next_player @@ GS.place_penguin gs color pos in
       inform_all_observers t (PenguinPlacement(new_state, color, pos));
       Option.some new_state
-    else handle_current_player_cheated t
+    else handle_player_cheated t color
 ;;
 
 (** EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
@@ -167,21 +166,19 @@ let handle_penguin_placement_phase (t : t) : unit =
     List.map ~f:PS.get_penguins @@ GS.get_ordered_players state
     |> List.for_all ~f:(fun pgs -> penguins_per_player = (List.length pgs))
   in
-  let get_next_state (state : GS.t) : GS.t option =
-    if all_players_have_enough_penguins state then None
-    else
-      let player_state = GS.get_current_player state in
-      if penguins_per_player = List.length @@ PS.get_penguins player_state
-      then Option.some @@ GS.rotate_to_next_player state
-      else handle_current_player_penguin_placement t state
+  let request_placement_or_skip_current_player (state : GS.t) : GS.t option =
+    let player_state = GS.get_current_player state in
+    if penguins_per_player = List.length @@ PS.get_penguins player_state
+    then Option.some @@ GS.rotate_to_next_player state
+    else handle_current_player_penguin_placement t state
   in
-  (* A loop mainly responsible for updating [t.state] *)
+  (* EFFECT: update [t] after every placement *)
   let rec loop (state : GS.t) : unit =
-    match get_next_state state with
-    | None -> ()
-    | Some(next_state) -> 
-      write_state t (Some next_state);
-      loop next_state
+    if not @@ all_players_have_enough_penguins state
+    then
+      (let next_state_opt = request_placement_or_skip_current_player state in
+       write_state t next_state_opt;
+       Option.iter next_state_opt ~f:loop)
   in
   Option.iter ~f:loop state;
 ;;
@@ -205,10 +202,10 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
   let color = GS.get_current_player state |> PS.get_color in
   let player = get_player_with_color t color in
   match get_player_action t player tree with
-  | None -> Option.map ~f:GT.create @@ handle_current_player_failed t
+  | None -> Option.map ~f:GT.create @@ handle_player_failure t color
   | Some(action) ->
     match List.Assoc.find ~equal:Action.equal subtrees action with
-    | None -> Option.map ~f:GT.create @@ handle_current_player_cheated t
+    | None -> Option.map ~f:GT.create @@ handle_player_cheated t color
     | Some(next_sub_tree) -> 
       let new_state = GT.get_state next_sub_tree in
       inform_all_observers t (TurnAction(new_state, color, action));
@@ -217,13 +214,14 @@ let handle_current_player_turn_action (t : t) (tree : GT.t) : GT.t option =
 
 (* EFFECT: upadte [t.state], [t.cheaters] and [t.failed]. *)
 let handle_turn_action_phase (t : t) : unit =
+  (* EFFECT: update [t] after every action *)
   let rec loop (tree : GT.t) : unit =
     match GT.get_subtrees tree with
     | [] -> () (* Game over *)
-    | _ -> Option.iter (handle_current_player_turn_action t tree)
-             ~f:(fun next_subtree ->
-                 write_state t (Some(GT.get_state next_subtree));
-                 loop next_subtree);
+    | _ ->
+      let next_tree_opt = handle_current_player_turn_action t tree in
+      write_state t @@ Option.map ~f:GT.get_state next_tree_opt;
+      Option.iter next_tree_opt ~f:loop
   in
   Option.iter ~f:loop @@ Option.map ~f:GT.create (read_state t);
 ;;
@@ -232,25 +230,25 @@ let handle_turn_action_phase (t : t) : unit =
     EFFECT: upadte [t.color_to_player], [t.state] and [t.failed]. *)
 let handle_color_assignment_phase t : unit =
   (* assign color to current player and return resulting game state *)
-  let handle_current_player state : GS.t option =
-    let color = GS.get_current_player state |> PS.get_color in
+  let inform_player_with_color color state : GS.t option =
     let player = get_player_with_color t color in
     let result = Timeout.call_with_timeout_ms
         (fun () -> player#assign_color color) t.conf.assign_color_timeout_ms in
     match result with
     | Some(true) -> Some(GS.rotate_to_next_player state)
-    | _ -> handle_current_player_failed t
+    | _ -> handle_player_failure t color
   in
-  let rec go more_times state : unit = (* short circuits if everyone left *)
-    match more_times with
-    | 0 -> ()
-    | _ -> Option.iter (handle_current_player state) 
-             ~f:(fun next_state ->
-                 write_state t (Some next_state);
-                 go (more_times-1) next_state)
+  (* EFFECT: update [t] after each color assignment *)
+  let rec go colors_to_inform state : unit =
+    match colors_to_inform with
+    | [] -> ()
+    | color::rest ->
+      let next_state_opt = inform_player_with_color color state in
+      write_state t next_state_opt;
+      Option.iter next_state_opt ~f:(go rest)
   in
-  Option.iter (read_state t)
-    ~f:(fun state -> go (List.length @@ GS.get_ordered_players state) state)
+  Option.iter (read_state t) ~f:(fun state ->
+      go (List.map ~f:PS.get_color (GS.get_ordered_players state)) state)
 ;;
 
 (** Error if given invalid # of players *)
