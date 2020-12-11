@@ -3,7 +3,9 @@ open !Core
 (** A Proxy Player acts on behalf of another Player; it communicates with the
     latter via a pre-determined message protocol.
     Inputs: the input/output channel over which the proxy player communicates
-    with the actual player, the name and age of this player *)
+    with the actual player, the name and age of this player.
+    NOTE The channels will be closed once the player is informed of tournament
+    result *)
 val create_proxy_player :
   In_channel.t -> Out_channel.t -> string -> int -> Player.t
 

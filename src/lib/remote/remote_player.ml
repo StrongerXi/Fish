@@ -121,7 +121,11 @@ let create_proxy_player
 
   method! inform_tournament_result (did_win : bool) =
     self#send_now @@ Call.to_string (Call.End did_win);
-    self#expect_void_str ()
+    let responded = self#expect_void_str () in
+    (* Maybe channel is automatically closed if remote connection shut down? *)
+    (try In_channel.close ic with _ -> ()); 
+    (try Out_channel.close oc with _ -> ());
+    responded
 
   method private place_penguin_impl (state : GS.t) : Pos.t option =
     self#send_now @@ Call.to_string (Call.Setup state);
