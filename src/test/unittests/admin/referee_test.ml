@@ -4,13 +4,6 @@ module Pos = Fish.Util.Position
 module Referee = Fish.Admin.Referee
 module Player = Fish.Player
 
-let get_default_ai_player i =
-  Player.create_AI_player
-    ~name:(string_of_int i)
-    Player.Strategy.Penguin_placer.create_scanning_strategy
-    (Player.Strategy.Turn_actor.create_minimax_strategy 1)
-;;
-
 let conf = Conf.create ~width:5 ~height:5
            |> Conf.set_default_num_of_fish 3
            |> Conf.set_holes []
@@ -43,30 +36,30 @@ let tests = OUnit2.(>:::) "referee_test" [
         OUnit.assert_raises (Failure "Invalid number of players: 0")
           (fun () -> Referee.run_game referee [] conf);
         OUnit.assert_raises (Failure "Invalid number of players: 1")
-          (fun () -> Referee.run_game referee [get_default_ai_player 0] conf);
+          (fun () -> Referee.run_game referee [Util.get_default_ai_player 0] conf);
 
         (* these should pass without error *)
         Core.ignore @@ Referee.run_game referee
-          (List.init 2 ~f:get_default_ai_player) conf_no_hole;
+          (List.init 2 ~f:Util.get_default_ai_player) conf_no_hole;
         Core.ignore @@ Referee.run_game referee
-          (List.init 3 ~f:get_default_ai_player) conf_no_hole;
+          (List.init 3 ~f:Util.get_default_ai_player) conf_no_hole;
         Core.ignore @@ Referee.run_game referee
-          (List.init 4 ~f:get_default_ai_player) conf_no_hole;
+          (List.init 4 ~f:Util.get_default_ai_player) conf_no_hole;
 
         (* too many players *)
         OUnit.assert_raises (Failure "Invalid number of players: 5")
           (fun () -> Referee.run_game referee
-              (List.init 5 ~f:get_default_ai_player) conf_no_hole);
+              (List.init 5 ~f:Util.get_default_ai_player) conf_no_hole);
         OUnit.assert_raises (Failure "Invalid number of players: 6")
           (fun () -> Referee.run_game referee
-              (List.init 6 ~f:get_default_ai_player) conf_no_hole);
+              (List.init 6 ~f:Util.get_default_ai_player) conf_no_hole);
 
         (* not enough open tiles for penguin placement *)
         let msg =
           "Board doesn't have enough non-hole tiles for penguin placement" in
         OUnit.assert_raises (Failure msg)
           (fun () -> Referee.run_game referee
-              (List.init 4 ~f:get_default_ai_player) conf);
+              (List.init 4 ~f:Util.get_default_ai_player) conf);
       );
 
     OUnit2.(>::) "test_run_game_all_fail_at_color_assignment" (fun _ ->
@@ -130,8 +123,8 @@ let tests = OUnit2.(>:::) "referee_test" [
 
     OUnit2.(>::) "test_run_game_mix_good_and_bad_players_multiple_runs" (fun _ ->
         let referee = Referee.create ~config:fast_timeout_config () in
-        let winners = [get_default_ai_player 42;] in
-        let losers = [get_default_ai_player 23;] in
+        let winners = [Util.get_default_ai_player 42;] in
+        let losers = [Util.get_default_ai_player 23;] in
         let cheaters = 
           [Mock_players.get_player_cheat_at_turn_action "cheat-0";] in
         let failed =
@@ -144,8 +137,8 @@ let tests = OUnit2.(>:::) "referee_test" [
         Util.check_same_set_of_players_by_names cheaters result.cheaters;
 
         (* Use the same referee for multiple times *)
-        let winners = [get_default_ai_player 42;] in
-        let losers = [get_default_ai_player 23;] in
+        let winners = [Util.get_default_ai_player 42;] in
+        let losers = [Util.get_default_ai_player 23;] in
         let cheaters = 
           [Mock_players.get_player_cheat_at_placement "cheat-0";] in
         let failed =
@@ -157,7 +150,7 @@ let tests = OUnit2.(>:::) "referee_test" [
         Util.check_same_set_of_players_by_names failed result.failed;
         Util.check_same_set_of_players_by_names cheaters result.cheaters;
 
-        let winners = [get_default_ai_player 42;] in
+        let winners = [Util.get_default_ai_player 42;] in
         let cheaters = 
           [Mock_players.get_player_cheat_at_placement "cheat-0";] in
         let failed =

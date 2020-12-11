@@ -12,3 +12,10 @@ let check_same_set_of_players_by_names ps1 ps2 =
     (List.sort ~compare:cmp_by_name ps1 |> List.map ~f:get_name)
     (List.sort ~compare:cmp_by_name ps2 |> List.map ~f:get_name);
 ;;
+
+let get_default_ai_player ?(depth=1) i =
+  P.create_AI_player
+    ~name:(string_of_int i)
+    P.Strategy.Penguin_placer.create_scanning_strategy
+    (P.Strategy.Turn_actor.create_minimax_strategy depth)
+;;
