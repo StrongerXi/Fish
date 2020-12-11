@@ -82,7 +82,7 @@ end
 (* Write [msg] to [oc] without delay from buffering *)
 let write_to_outchan_now (oc : Out_channel.t) (msg : string) : unit =
   Out_channel.output_string oc msg;
-  Out_channel.flush oc
+  Out_channel.flush oc;
 ;;
 
 
@@ -123,11 +123,6 @@ let create_proxy_player
     self#send_now @@ Call.to_string (Call.End did_win);
     self#expect_void_str ()
 
-  (* return [None] _any_ exception is raised *)
-  method private get_next_input () : S.t option =
-    try Some(Stream.next inputs)
-    with _ -> None (* catch any error *)
-
   method private place_penguin_impl (state : GS.t) : Pos.t option =
     self#send_now @@ Call.to_string (Call.Setup state);
     Option.bind ~f:(Fn.compose Result.ok S.to_pos) @@ self#get_next_input()
@@ -142,6 +137,11 @@ let create_proxy_player
     self#send_now @@ Call.to_string (Call.PlayWith other_colors);
     self#expect_void_str ()
 
+  (* return [None] _any_ exception is raised *)
+  method private get_next_input () : S.t option =
+    try Some(Stream.next inputs)
+    with _ -> None
+
   (* Return [true] if we receive a void string back from [inputs] *)
   method private expect_void_str () : bool =
     match Option.bind ~f:S.to_string @@ self#get_next_input() with
@@ -150,7 +150,7 @@ let create_proxy_player
 
   (* Write [msg] to [oc] immediately; catch and ignore _any_ exception raised *)
   method private send_now (msg : string) : unit =
-    try write_to_outchan_now oc msg
+    try write_to_outchan_now oc msg;
     with _ -> ()
 end
 
