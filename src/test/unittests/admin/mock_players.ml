@@ -60,6 +60,16 @@ let get_player_hang_at_color_assignment name = object
   method! assign_color _ = block_for_a_long_time ()
 end
 
+let get_player_hang_at_inform_tournament_start name = object
+  inherit ai_player name
+  method! inform_tournament_start = block_for_a_long_time ()
+end
+
+let get_player_hang_at_inform_tournament_result name = object
+  inherit ai_player name
+  method! inform_tournament_result _ = block_for_a_long_time ()
+end
+
 let get_player_hang_at_color_assignment_and_disqualification name = object
   inherit ai_player name
   method! assign_color _ = block_for_a_long_time ()
