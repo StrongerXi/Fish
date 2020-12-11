@@ -25,12 +25,13 @@ let default_timeout_config =
 
 (** A [t] represents the knowledge of a tournament manager *)
 type t =
-  { active_players : Player.t list
-  ; all_losers     : Player.t list
-  ; cheaters       : Player.t list
-  ; failed_players : Player.t list
-  ; board_conf     : BoardConf.t
-  ; timeout_conf   : timeout_config
+  { active_players         : Player.t list
+  ; all_losers             : Player.t list
+  ; cheaters               : Player.t list
+  ; failed_players         : Player.t list
+  ; board_conf             : BoardConf.t
+  ; timeout_conf           : timeout_config
+  ; referee_timeout_conf   : Referee.timeout_config
   }
 
 let sort_players_by_age (ps : Player.t list) : Player.t list =
@@ -102,7 +103,7 @@ let allocate_players_to_games (players : Player.t list) : Player.t list list =
 let run_games (t : t) (groups : Player.t list list) : t =
   let t = { t with active_players = [] } in
   List.fold_left groups ~init:t ~f:(fun t players ->
-      let referee = Referee.create () in
+      let referee = Referee.create ~config:t.referee_timeout_conf () in
       let res = Referee.run_game referee players t.board_conf in
       { t with active_players = (res.winners @ t.active_players);
                cheaters = (res.cheaters @ t.cheaters);
@@ -124,7 +125,10 @@ let inform_and_compile_tournament_result (t : t) : Tournament_result.t =
     all_failed_players = (failed_losers @ failed_winners @ t.failed_players) }
 ;;
 
-let run_tournament ?(timeout_conf = default_timeout_config) players board_conf =
+let run_tournament
+    ?(timeout_conf = default_timeout_config)
+    ?(referee_timeout_conf = Referee.default_timeout_config)
+    players board_conf =
   (* ASSUME: [(List.length t.active_players) > Referee.C.min_num_of_players] *)
   let rec loop (t : t) (prev_winners : Player.t list) : Tournament_result.t =
     let t = { t with active_players = sort_players_by_age t.active_players } in
@@ -137,7 +141,8 @@ let run_tournament ?(timeout_conf = default_timeout_config) players board_conf =
     else loop t t.active_players
   in
   let t = { active_players = players; all_losers = []; cheaters = [];
-            failed_players = []; board_conf; timeout_conf } in
+            failed_players = [];
+            board_conf; timeout_conf; referee_timeout_conf } in
   let t = inform_players_tournament_start t in
   if (List.length t.active_players) < Referee.C.min_num_of_players
   then inform_and_compile_tournament_result t

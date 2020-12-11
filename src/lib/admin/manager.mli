@@ -22,4 +22,5 @@ val default_timeout_config : timeout_config
        final game (and yes this game is run). 
     The order of players in each game is based on their age (youngest first) *)
 val run_tournament : ?timeout_conf:timeout_config ->
+  ?referee_timeout_conf:Referee.timeout_config ->
   Player.t list -> Common.Board.Config.t -> Tournament_result.t
