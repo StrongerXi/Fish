@@ -1,4 +1,4 @@
 (tests
-  (names position_test circular_queue_test)
+  (names position_test circular_queue_test timeout_test)
   (libraries ounit2 fish)
 )
