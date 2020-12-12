@@ -57,12 +57,14 @@ let is_same_set_of_players (ps1 : Player.t list) (ps2 : Player.t list) : bool =
 ;;
 
 (* If [f] returns [false], then the player is considered as "not responded" *)
-let call_all_players_timeout (players : Player.t list) (f : Player.t -> bool) (timeout_ms : int) : 
-  (Player.t list * Player.t list) = (* responded players and others *)
-  List.fold_left players ~init:([], []) ~f:(fun (good, bad) p ->
-      match Timeout.call_with_timeout_ms (fun () -> f p) timeout_ms with
-      | Some(true) -> (p::good, bad)
-      | _ -> (good, p::bad))
+let call_all_players_timeout
+    (players : Player.t list) (f : Player.t -> bool) (timeout_ms : int)
+  : (Player.t list * Player.t list) = (* responded players and others *)
+  List.fold_left players ~init:([], [])
+    ~f:(fun (responded_ones, failed_ones) p ->
+        match Timeout.call_with_timeout_ms (fun () -> f p) timeout_ms with
+        | Some(true) -> (p::responded_ones, failed_ones)
+        | _ -> (responded_ones, p::failed_ones))
 ;;
 
 let inform_players_tournament_start (t : t) : t =
