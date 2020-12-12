@@ -1,6 +1,6 @@
 (tests
-  (names referee_test)
-  (modules referee_test)
+  (names referee_test manager_test)
+  (modules referee_test manager_test)
   (libraries ounit2 core fish mock_players util)
 )
 
