@@ -28,8 +28,8 @@ class virtual t : string -> int -> object
   (** Return the name associated with this player *)
   method get_name : unit -> string
 
-  (** Return the age associated with this player (players who signed up earlier
-      should have smaller age *)
+  (** Return the age associated with this player.
+      Players who signed up earlier should have smaller age. *)
   method get_age : unit -> int
 
   (** Inform this player that it has been disqualified from a fish game 
@@ -39,6 +39,10 @@ class virtual t : string -> int -> object
   (** Inform this player whether it has won the tournament
       Return [true] if the player responded *)
   method inform_tournament_result : bool -> bool
+
+  (** Release all resources used by [t];
+      [t] should never be used again after this call. *)
+  method dispose : unit -> unit
 end
 
 (** Create an AI player who uses given strategies for decision making.

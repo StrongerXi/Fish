@@ -55,6 +55,7 @@ val add_game_observer : t -> Game_observer.t -> unit
     The initial board is constructed based on given config.
     Each player gets a fixed # of penguins to place, then the game continues
     until either no player can make a move, or everyone is kicked out.
+    NOTE cheaters and failed players will be disposed immediately.
     Error if 
     - the # of players is outside the range specified in constants above.
     - we can't create a valid board based on given config.

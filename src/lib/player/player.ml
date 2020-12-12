@@ -14,6 +14,7 @@ class virtual t (name : string) (age : int) = object
   method assign_color (_ : PS.Player_color.t) = true
   method inform_disqualified () = true
   method inform_tournament_result (_ : bool) = true
+  method dispose () = ()
 end
 
 class ai_player 

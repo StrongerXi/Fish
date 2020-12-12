@@ -56,15 +56,16 @@ let is_same_set_of_players (ps1 : Player.t list) (ps2 : Player.t list) : bool =
     (Set.of_list (module PlayerPair) ps2)
 ;;
 
-(* If [f] returns [false], then the player is considered as "not responded" *)
+(* If [f] returns [false], then the player is considered as "not responded".
+   Dispose all failed players. *)
 let call_all_players_timeout
     (players : Player.t list) (f : Player.t -> bool) (timeout_ms : int)
-  : (Player.t list * Player.t list) = (* responded players and others *)
+  : (Player.t list * Player.t list) = (* responded players and failed ones *)
   List.fold_left players ~init:([], [])
     ~f:(fun (responded_ones, failed_ones) p ->
         match Timeout.call_with_timeout_ms (fun () -> f p) timeout_ms with
         | Some(true) -> (p::responded_ones, failed_ones)
-        | _ -> (responded_ones, p::failed_ones))
+        | _ -> p#dispose(); (responded_ones, p::failed_ones))
 ;;
 
 let inform_players_tournament_start (t : t) : t =
@@ -113,7 +114,8 @@ let run_games (t : t) (groups : Player.t list list) : t =
                all_losers = (res.rest @ t.all_losers); })
 ;;
 
-(* [t.active_players] who responded become final winners *)
+(* [t.active_players] who responded become final winners.
+ * Dispose all remaining players*)
 let inform_and_compile_tournament_result (t : t) : Tournament_result.t =
   let final_winners, failed_winners = call_all_players_timeout t.active_players
       (fun p -> p#inform_tournament_result true)
@@ -123,6 +125,7 @@ let inform_and_compile_tournament_result (t : t) : Tournament_result.t =
       (fun p -> p#inform_tournament_result false)
       t.timeout_conf.inform_tournament_result_timeout_ms
   in
+  List.iter ~f:(fun p -> p#dispose()) (final_winners @ final_losers);
   { final_winners; all_losers = final_losers; all_cheaters = t.cheaters;
     all_failed_players = (failed_losers @ failed_winners @ t.failed_players) }
 ;;

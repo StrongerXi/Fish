@@ -20,7 +20,8 @@ val default_timeout_config : timeout_config
     2. when there are too few players for a single game, 
     3. when the number of participants has become small enough to run a single 
        final game (and yes this game is run). 
-    The order of players in each game is based on their age (youngest first) *)
+    The order of players in each game is based on their age (youngest first).
+    NOTE all players will be disposed when this function call returns. *)
 val run_tournament : ?timeout_conf:timeout_config ->
   ?referee_timeout_conf:Referee.timeout_config ->
   Player.t list -> Common.Board.Config.t -> Tournament_result.t

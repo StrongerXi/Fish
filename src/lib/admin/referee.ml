@@ -122,6 +122,7 @@ let disqualify_current_player (t : t) (color : Color.t) (why : [`Cheat | `Fail])
            Core.ignore @@ Timeout.call_with_timeout_ms
              (fun () -> player#inform_disqualified ())
              t.conf.inform_disqualified_timeout_ms);
+        player#dispose();
         inform_all_observers t (Disqualify(new_state, color));
         new_state)
 ;;
