@@ -31,8 +31,9 @@ let create_ith_player (conf : config) (i : int) : Player.t =
 
 let create_ith_thread (conf : config) (i : int) : Thread.t =
   let player = create_ith_player conf i in
-  Thread.create (fun () ->
-      Remote_player.interact_with_proxy player conf.server_ip conf.port)
+  let ipaddr, port = conf.server_ip, conf.port in
+  Thread.create
+    (fun () -> Remote_player.interact_with_proxy player ~ipaddr ~port)
     ~on_uncaught_exn:`Print_to_stderr ()
 ;;
 

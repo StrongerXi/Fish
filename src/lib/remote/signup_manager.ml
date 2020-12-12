@@ -52,7 +52,7 @@ let handle_waiting_period (server : Unix.File_descr.t)
       let ic = Unix.in_channel_of_descr client_sock in
       let oc = Unix.out_channel_of_descr client_sock in
       let age = List.length players in
-      (Remote_player.create_proxy_player ic oc name age)::players
+      (Remote_player.create_proxy_player ic oc ~name ~age)::players
   in
   loop connected_players conf.waiting_period_ms
 ;;

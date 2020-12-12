@@ -93,9 +93,7 @@ let void_ackn_msg = "void"
 ;;
 
 
-let create_proxy_player
-    (ic : In_channel.t) (oc : Out_channel.t) (name : string) (age : int)
-  = object (self)
+let create_proxy_player ic oc ~name ~age = object (self)
     inherit Player.t name age
     val inputs : S.t Stream.t = S.stream_from_channel ic
     val mutable first_setup : bool = true
@@ -206,8 +204,8 @@ let interact_with_proxy_chans (player : Player.t)
   loop ();
 ;;
 
-let interact_with_proxy player ip port =
-  let server_addr = Unix.Inet_addr.of_string ip in
+let interact_with_proxy player ~ipaddr ~port =
+  let server_addr = Unix.Inet_addr.of_string ipaddr in
   let sockaddr = Unix.ADDR_INET(server_addr, port) in 
   let ic, oc = Unix.open_connection sockaddr in
   interact_with_proxy_chans player ic oc;
