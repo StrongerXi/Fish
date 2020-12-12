@@ -9,13 +9,13 @@ module Act = Common.Action
 module S = Serialize.Serialization
 
 module Call = struct
-  (** A [t] represents a function call with its arguments *)
+  (** A [t] represents a remote function call with its arguments *)
   type t =
     | Start
-    | PlayAs   of PC.t
-    | PlayWith of PC.t list
-    | Setup    of GS.t
-    | TakeTurn of GS.t * Act.t list
+    | PlayAs   of Common.Player_state.Player_color.t
+    | PlayWith of Common.Player_state.Player_color.t list
+    | Setup    of Common.Game_state.t
+    | TakeTurn of Common.Game_state.t * Common.Action.t list
     | End      of bool
 
   (* Some constants *)
@@ -25,13 +25,15 @@ module Call = struct
   let setup_name     = "setup"
   let take_turn_name = "take-turn"
   let end_name       = "end"
-  let ackn_msg       = "void"
 
-  let to_string (t : t) : string =
-    let helper (func_name : string) (args : S.t list) : string =
+  (* NOTE [deserialize (serialize t)] is guaranteed to be [Some t] *)
+
+  (** Convert [t] into a serialized format. *)
+  let serialize (t : t) : S.t =
+    let helper (func_name : string) (args : S.t list) : S.t =
       let arr = [S.from_string func_name;
                  S.from_list args Fun.id] in
-      S.from_list arr Fun.id |> S.to_json_string
+      S.from_list arr Fun.id
     in
     match t with
     | Start         -> helper start_name [S.from_bool true]
@@ -44,6 +46,8 @@ module Call = struct
     | End(did_win) -> helper end_name [S.from_bool did_win]
   ;;
 
+  (** Convert a serialized [t] back to the original [t].
+      Return [None] if it's malformed *)
   let deserialize (s : S.t) : t option =
     let open Option.Let_syntax in
     let name_with_args : (string * S.t list) option =
@@ -78,41 +82,44 @@ module Call = struct
   ;;
 end
 
-
 (* Write [msg] to [oc] without delay from buffering *)
 let write_to_outchan_now (oc : Out_channel.t) (msg : string) : unit =
   Out_channel.output_string oc msg;
   Out_channel.flush oc;
 ;;
 
+(* Used to communicate acknowledgement of a remote call that returns nothing *)
+let void_ackn_msg = "void"
+;;
+
 
 let create_proxy_player
     (ic : In_channel.t) (oc : Out_channel.t) (name : string) (age : int)
   = object (self)
-  inherit Player.t name age
-  val inputs : S.t Stream.t = S.stream_from_channel ic
-  val mutable first_setup : bool = true
+    inherit Player.t name age
+    val inputs : S.t Stream.t = S.stream_from_channel ic
+    val mutable first_setup : bool = true
 
-  method place_penguin (state : GS.t) =
-    if first_setup
-    then
-      (first_setup <- false;
-       if self#play_with state
-       then self#place_penguin_impl state
-       else None)
-    else self#place_penguin_impl state
+    method place_penguin (state : GS.t) =
+      if first_setup
+      then
+        (first_setup <- false;
+         if self#play_with state
+         then self#place_penguin_impl state
+         else None)
+      else self#place_penguin_impl state
 
-  method take_turn (tree : GT.t) =
-    self#send_now @@ Call.to_string (Call.TakeTurn(GT.get_state tree, []));
-    Option.bind ~f:(Fn.compose Result.ok S.to_action) @@ self#get_next_input()
+    method take_turn (tree : GT.t) =
+      self#send_call (Call.TakeTurn(GT.get_state tree, []));
+      Option.bind ~f:(Fn.compose Result.ok S.to_action) @@ self#get_next_input()
 
-  method! inform_tournament_start () =
-    self#send_now @@ Call.to_string Call.Start;
+    method! inform_tournament_start () =
+    self#send_call Call.Start;
     self#expect_void_str ()
 
   method! assign_color (color : PC.t) =
     first_setup <- true; (* a new game has started *)
-    self#send_now @@ Call.to_string (Call.PlayAs color);
+    self#send_call (Call.PlayAs color);
     self#expect_void_str ()
 
   method! inform_disqualified () =
@@ -120,7 +127,7 @@ let create_proxy_player
     self#inform_tournament_result false
 
   method! inform_tournament_result (did_win : bool) =
-    self#send_now @@ Call.to_string (Call.End did_win);
+    self#send_call (Call.End did_win);
     let responded = self#expect_void_str () in
     (* Maybe channel is automatically closed if remote connection shut down? *)
     (try In_channel.close ic with _ -> ()); 
@@ -128,7 +135,7 @@ let create_proxy_player
     responded
 
   method private place_penguin_impl (state : GS.t) : Pos.t option =
-    self#send_now @@ Call.to_string (Call.Setup state);
+    self#send_call (Call.Setup state);
     Option.bind ~f:(Fn.compose Result.ok S.to_pos) @@ self#get_next_input()
 
   (* Our player interface doesn't have "play-with", so we simulate it *)
@@ -138,7 +145,7 @@ let create_proxy_player
                        |> List.map ~f:PS.get_color
                        |> List.filter ~f:(fun c -> not @@ PC.equal c my_color)
     in
-    self#send_now @@ Call.to_string (Call.PlayWith other_colors);
+    self#send_call (Call.PlayWith other_colors);
     self#expect_void_str ()
 
   (* return [None] _any_ exception is raised *)
@@ -149,11 +156,13 @@ let create_proxy_player
   (* Return [true] if we receive a void string back from [inputs] *)
   method private expect_void_str () : bool =
     match Option.bind ~f:S.to_string @@ self#get_next_input() with
-    | Some(s) when String.(s = Call.ackn_msg) -> true
+    | Some(s) when String.(s = void_ackn_msg) -> true
     | _ -> false
 
-  (* Write [msg] to [oc] immediately; catch and ignore _any_ exception raised *)
-  method private send_now (msg : string) : unit =
+  (* Write serialized [call] to [oc] immediately;
+   * catch and ignore _any_ exception raised *)
+  method private send_call (call : Call.t) : unit =
+    let msg = S.to_json_string @@ Call.serialize call in
     try write_to_outchan_now oc msg;
     with _ -> ()
 end
@@ -164,7 +173,7 @@ let handle_remote_call
     (player : Player.t) (call : Call.t) (oc : Out_channel.t): bool =
   (* Send [Call.ackn_msg] to [oc] if [b] is [true]. Return [b] at the end *)
   let send_void () : unit =
-    write_to_outchan_now oc @@ (S.from_string Call.ackn_msg |> S.to_json_string);
+    write_to_outchan_now oc @@ (S.from_string void_ackn_msg |> S.to_json_string);
   in
   (match call with
    | Start -> if player#inform_tournament_start() then send_void ();
