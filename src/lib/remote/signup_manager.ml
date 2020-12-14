@@ -1,6 +1,7 @@
 open !Core
 
 module Timeout = Util.Timeout
+module S = Serialize.Serialization
 
 type config =
   { min_num_of_players     : int
@@ -24,7 +25,6 @@ let create_server (conf : config) (port : int) : Unix.File_descr.t =
 
 let handle_waiting_period (server : Unix.File_descr.t)
     (conf : config) (connected_players : Player.t list) : Player.t list =
-  let buf = Core.Bytes.create conf.max_name_bytes in
   let rec loop
       (players : Player.t list) (time_left_ms : int) : Player.t list =
     if (List.length players) >= conf.max_num_of_players
@@ -42,14 +42,16 @@ let handle_waiting_period (server : Unix.File_descr.t)
   (* Add [client_sock] as a proxy player to [players] if it sends a name in time *)
   and try_to_add_client (players : Player.t list) (client_sock : Unix.File_descr.t)
     : Player.t list =
-    let opt_name = Timeout.call_with_timeout_ms (fun () ->
-        let n = Unix.read ~pos:0 ~len:conf.max_name_bytes ~buf client_sock in
-        Core.Bytes.sub buf ~pos:0 ~len:n |> Core.Bytes.to_string)
+    let ic = Unix.in_channel_of_descr client_sock in
+    let opt_name = (* don't differentiate timeout and io errors *)
+      Option.bind ~f:Fn.id @@
+      Timeout.call_with_timeout_ms (fun () ->
+        try S.stream_from_channel ic |> Stream.next |> S.to_string
+        with _ -> None)
         conf.name_reply_timeout_ms in
     match opt_name with
     | None -> players
     | Some(name) -> 
-      let ic = Unix.in_channel_of_descr client_sock in
       let oc = Unix.out_channel_of_descr client_sock in
       let age = List.length players in
       (Remote_player.create_proxy_player ic oc ~name ~age)::players

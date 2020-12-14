@@ -201,7 +201,8 @@ let interact_with_proxy_chans (player : Player.t)
                 (S.to_json_string next_s);
     | Some(call) -> if not (handle_remote_call player call oc) then loop ()
   in
-  write_to_outchan_now oc @@ player#get_name();
+  let name_str = player#get_name() |> S.from_string |> S.to_json_string in
+  write_to_outchan_now oc name_str;
   loop ();
 ;;
 
