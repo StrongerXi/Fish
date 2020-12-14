@@ -46,16 +46,26 @@ let create_server (conf : config) (port : int) : Unix.File_descr.t =
   sock
 ;;
 
+let is_valid_name (conf : config) (name : string) : bool =
+  not @@ String.is_empty name &&
+  String.length name <= conf.max_name_bytes &&
+  String.for_all name ~f:Char.is_alpha
+;;
+
 let handle_waiting_period (server : Unix.File_descr.t)
     (conf : config) (connected_players : Player.t list) : Player.t list =
   let timer = Timer.create conf.waiting_period_ms in
-  (* Return [None] on any communication failure or if [timer] expires *)
-  let read_name (ic : In_channel.t) : string option =
-    Option.bind ~f:Fn.id @@ (* don't differentiate timeout and io errors *)
-    Timeout.call_with_timeout_ms (fun () ->
-        try S.stream_from_channel ic |> Stream.next |> S.to_string
-        with _ -> None (* catch io exceptions *))
-      (Int.min (Timer.get_time_left_ms timer) conf.name_reply_timeout_ms)
+  (* Return [None] on invalid name, comm failure or [timer] expiration *)
+  let read_and_validate_name (ic : In_channel.t) : string option =
+    let open Option.Let_syntax in
+    let%bind opt_name =
+      Timeout.call_with_timeout_ms (fun () ->
+          try S.stream_from_channel ic |> Stream.next |> S.to_string
+          with _ -> None (* catch io exceptions *))
+        (Int.min (Timer.get_time_left_ms timer) conf.name_reply_timeout_ms)
+    in
+    let%bind name = opt_name in
+    Option.some_if (is_valid_name conf name) name
   in
   (* Keep accepting new player until maximum # is reached or [timer] expires *)
   let rec loop (players : Player.t list) : Player.t list =
@@ -68,15 +78,15 @@ let handle_waiting_period (server : Unix.File_descr.t)
               (Timer.get_time_left_ms timer) with
       | None -> players (* this waiting period is over *)
       | Some(client_sock, _) -> loop @@ try_to_add_client players client_sock
-  (* Add [client_sock] as a proxy player to [players] if it sends in a name
-   * before [timer] expires *)
+  (* Add [client_sock] as a proxy player to [players] if it sends in a valid
+   * name before [timer] expires *)
   and try_to_add_client
       (players : Player.t list)
       (client_sock : Unix.File_descr.t) : Player.t list =
     try (* catch io exceptions *)
       let ic = Unix.in_channel_of_descr client_sock in
       let oc = Unix.out_channel_of_descr client_sock in
-      match read_name ic with
+      match read_and_validate_name ic with
       | None -> Unix.close client_sock; players (* properly release resources *)
       | Some(name) ->
         let age = List.length players in
