@@ -13,6 +13,29 @@ type config =
   ; max_pending_reqs       : int
   }
 
+(* A mutable timer to keep track of the amount of time left *)
+module Timer = struct
+  type t =
+    { mutable start_ms     : float
+    ; mutable time_left_ms : float
+    }
+
+  let create (time_left_ms : int) =
+    { start_ms = 1000. *. Unix.gettimeofday();
+      time_left_ms = float_of_int time_left_ms }
+  ;;
+
+  (* Return time_left_ms relative to the creation of this timer.
+   * EFFECT: update [t.start_ms] and [t.time_left_ms] *)
+  let get_time_left_ms (t : t) : int =
+    let new_start_ms = 1000. *. Unix.gettimeofday() in
+    let time_passed_ms = new_start_ms -. t.start_ms in
+    t.time_left_ms <- t.time_left_ms -. time_passed_ms;
+    t.start_ms     <- new_start_ms;
+    int_of_float t.time_left_ms
+  ;;
+end
+
 (** Return a socket that is ready to accpet connections *)
 let create_server (conf : config) (port : int) : Unix.File_descr.t =
   let sockaddr = Unix.ADDR_INET(Unix.Inet_addr.localhost, port) in
@@ -25,38 +48,39 @@ let create_server (conf : config) (port : int) : Unix.File_descr.t =
 
 let handle_waiting_period (server : Unix.File_descr.t)
     (conf : config) (connected_players : Player.t list) : Player.t list =
-  let rec loop
-      (players : Player.t list) (time_left_ms : int) : Player.t list =
-    if (List.length players) >= conf.max_num_of_players
+  let timer = Timer.create conf.waiting_period_ms in
+  let rec loop (players : Player.t list) : Player.t list =
+    if (List.length players) >= conf.max_num_of_players ||
+       Timer.get_time_left_ms timer < 0
     then players
     else
-      let start_ms = Unix.gettimeofday () in
       match Timeout.call_with_timeout_ms
-              (fun () -> Unix.accept server) time_left_ms with
+              (fun () -> Unix.accept server)
+              (Timer.get_time_left_ms timer) with
       | None -> players (* this waiting period is over *)
-      | Some(client_sock, _) ->
-        let players = try_to_add_client players client_sock in
-        let time_passed_ms =
-          int_of_float Float.(1000. * ((Unix.gettimeofday()) - start_ms)) in
-        loop players (time_left_ms - time_passed_ms)
+      | Some(client_sock, _) -> loop @@ try_to_add_client players client_sock
   (* Add [client_sock] as a proxy player to [players] if it sends a name in time *)
-  and try_to_add_client (players : Player.t list) (client_sock : Unix.File_descr.t)
-    : Player.t list =
-    let ic = Unix.in_channel_of_descr client_sock in
-    let opt_name = (* don't differentiate timeout and io errors *)
-      Option.bind ~f:Fn.id @@
-      Timeout.call_with_timeout_ms (fun () ->
-        try S.stream_from_channel ic |> Stream.next |> S.to_string
-        with _ -> None)
-        conf.name_reply_timeout_ms in
-    match opt_name with
-    | None -> players
-    | Some(name) -> 
+  and try_to_add_client
+      (players : Player.t list)
+      (client_sock : Unix.File_descr.t) : Player.t list =
+    try
+      let ic = Unix.in_channel_of_descr client_sock in
       let oc = Unix.out_channel_of_descr client_sock in
-      let age = List.length players in
-      (Remote_player.create_proxy_player ic oc ~name ~age)::players
+      let opt_name =
+        Option.bind ~f:Fn.id @@ (* don't differentiate timeout and io errors *)
+        Timeout.call_with_timeout_ms
+          (fun () -> S.stream_from_channel ic |> Stream.next |> S.to_string)
+          (Int.min (Timer.get_time_left_ms timer) conf.name_reply_timeout_ms) in
+      match opt_name with
+      | None -> Unix.close client_sock; players (* properly release resources *)
+      | Some(name) ->
+        let age = List.length players in
+        (Remote_player.create_proxy_player ic oc ~name ~age)::players
+    with _ -> Unix.close client_sock; players (* properly release resources *)
   in
-  loop connected_players conf.waiting_period_ms
+  (* Chose not to use Timeout module for end of waiting period because we need
+   * to properly release socket resources *)
+  loop connected_players
 ;;
 
 let sign_up conf port =
