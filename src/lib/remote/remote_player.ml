@@ -170,7 +170,7 @@ end
 (* Return [false] if Call.End is received, i.e., the tournament has ended *)
 let handle_remote_call
     (player : Player.t) (call : Call.t) (oc : Out_channel.t): bool =
-  (* Send [Call.ackn_msg] to [oc] if [b] is [true]. Return [b] at the end *)
+  (* Serialize [Call.ackn_msg] and send it to [oc] immediately *)
   let send_void () : unit =
     write_to_outchan_now oc @@ (S.from_string void_ackn_msg |> S.to_json_string);
   in
