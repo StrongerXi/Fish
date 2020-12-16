@@ -98,7 +98,7 @@ let handle_waiting_period (server : Unix.File_descr.t)
   loop connected_players
 ;;
 
-let sign_up conf port =
+let sign_up conf ~port =
   let rec loop (server : Unix.File_descr.t)
       (num_of_wp_left : int) (players : Player.t list) : Player.t list =
     if num_of_wp_left = 0 then players

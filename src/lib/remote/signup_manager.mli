@@ -22,4 +22,4 @@ type config =
     2. the min # of players has been reached at the end of a waiting
     3. the # of waiting periods has been exhausted
     The players will be assigned distinct age (lower if it signs up earlier). *)
-val sign_up : config -> int -> Player.t list
+val sign_up : config -> port:int -> Player.t list
