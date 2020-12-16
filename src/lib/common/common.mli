@@ -1,3 +1,6 @@
+(* This module contains the common ontology on individual Fish game used by the
+ * server and client *)
+
 module Game_state = Game_state
 module Game_tree = Game_tree
 module Board = Board
