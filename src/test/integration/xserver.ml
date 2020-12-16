@@ -7,7 +7,7 @@ module Manager = Fish.Admin.Manager
 let signup_config = 
   { Signup.min_num_of_players = 5; max_num_of_players = 10;
     num_of_waiting_periods = 2; waiting_period_ms = 30_000;
-    name_reply_timeout_ms = 10_000; max_name_bytes = 12;
+    name_reply_timeout_ms = 10_000; max_name_length = 12;
     max_pending_reqs = 80; }
 ;;
 
@@ -28,7 +28,7 @@ let () =
   match parse_port @@ Sys.get_argv () with
   | None -> Printf.printf "Please specify a single integer for port\n"
   | Some(port) ->
-    let players = Signup.sign_up signup_config port in
+    let players = Signup.sign_up signup_config ~port in
     if (List.length players) >= signup_config.min_num_of_players
     then
       begin
@@ -37,5 +37,5 @@ let () =
         let cheater_count = List.length result.all_cheaters in
         let failde_player_count = List.length result.all_failed_players in
         S.from_list [winner_count; cheater_count + failde_player_count] S.from_int
-        |> S.to_json_string |> Printf.printf "%s\n";
+        |> S.serialize |> Printf.printf "%s\n";
       end

@@ -266,13 +266,13 @@ let from_int b = `Int b
 let to_int t = catch_type_error YB.Util.to_int t
 ;;
 
-let from_json_string str =
+let deserialize str =
   try
     Some(YB.from_string str)
   with Yojson.Json_error(_) -> None
 ;;
 
-let to_json_string (t : t) = YB.to_string t
+let serialize (t : t) = YB.to_string t
 ;;
 
 let stream_from_channel in_chan =

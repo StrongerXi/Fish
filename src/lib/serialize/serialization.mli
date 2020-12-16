@@ -41,7 +41,7 @@ val to_bool   : t -> bool option
 val from_int : int -> t
 val to_int   : t -> int option
 
-val from_json_string : string -> t option
-val to_json_string : t -> string
+val deserialize : string -> t option
+val serialize   : t -> string
 
 val stream_from_channel : in_channel -> t Stream.t

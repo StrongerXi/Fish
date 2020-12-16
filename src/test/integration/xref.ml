@@ -15,7 +15,7 @@ module Ref = Fish.Admin.Referee
     desired move isn't possible. *)
 let () =
   let input = Core.In_channel.input_all Core.In_channel.stdin in
-  let serialized = S.from_json_string input 
+  let serialized = S.deserialize input 
                    |> Result.of_option ~error:"invalid serialization form" in
   match Result.bind ~f:S.to_game_description serialized with
   | Error(reason) -> Printf.printf "Invalid input, reason: %s\n" reason
@@ -27,4 +27,4 @@ let () =
     let winners = (Ref.run_game (Ref.create ()) players conf).winners
                   |> List.map ~f:(fun p -> p#get_name ())
                   |> List.sort ~compare:(String.compare) in
-    S.from_list winners S.from_string |> S.to_json_string |> Printf.printf "%s\n"
+    S.from_list winners S.from_string |> S.serialize |> Printf.printf "%s\n"

@@ -161,7 +161,7 @@ let create_proxy_player ic oc ~name ~age = object (self)
   (* Write serialized [call] to [oc] immediately;
    * catch and ignore _any_ exception raised *)
   method private send_call (call : Call.t) : unit =
-    let msg = S.to_json_string @@ Call.serialize call in
+    let msg = S.serialize @@ Call.serialize call in
     try write_to_outchan_now oc msg;
     with _ -> ()
 end
@@ -172,7 +172,7 @@ let handle_remote_call
     (player : Player.t) (call : Call.t) (oc : Out_channel.t): bool =
   (* Serialize [Call.ackn_msg] and send it to [oc] immediately *)
   let send_void () : unit =
-    write_to_outchan_now oc @@ (S.from_string void_ackn_msg |> S.to_json_string);
+    write_to_outchan_now oc @@ (S.from_string void_ackn_msg |> S.serialize);
   in
   (match call with
    | Start -> if player#inform_tournament_start() then send_void ();
@@ -180,10 +180,10 @@ let handle_remote_call
    | PlayWith(_) -> send_void (); (* not implemented in our codebase *)
    | Setup(state) ->
      Option.iter (player#place_penguin state) ~f:(fun pos ->
-         write_to_outchan_now oc @@ (S.from_pos pos |> S.to_json_string));
+         write_to_outchan_now oc @@ (S.from_pos pos |> S.serialize));
    | TakeTurn(state, _) ->
      Option.iter (player#take_turn @@ GT.create state) ~f:(fun act ->
-         write_to_outchan_now oc @@ (S.from_action act |> S.to_json_string));
+         write_to_outchan_now oc @@ (S.from_action act |> S.serialize));
    | End(did_win) ->
      if player#inform_tournament_result did_win then send_void ());
   match call with
@@ -197,11 +197,11 @@ let interact_with_proxy_chans (player : Player.t)
   let rec loop () : unit =
     let next_s = Stream.next inputs in
     match Call.deserialize next_s with
-    | None -> Printf.printf "Invalid remote call message: %s\n"
-                (S.to_json_string next_s);
+    | None ->
+      Printf.printf "Invalid remote call message: %s\n" (S.serialize next_s);
     | Some(call) -> if not (handle_remote_call player call oc) then loop ()
   in
-  let name_str = player#get_name() |> S.from_string |> S.to_json_string in
+  let name_str = player#get_name() |> S.from_string |> S.serialize in
   write_to_outchan_now oc name_str;
   loop ();
 ;;
