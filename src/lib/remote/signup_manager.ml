@@ -9,7 +9,7 @@ type config =
   ; num_of_waiting_periods : int
   ; waiting_period_ms      : int
   ; name_reply_timeout_ms  : int
-  ; max_name_bytes         : int
+  ; max_name_length        : int
   ; max_pending_reqs       : int
   }
 
@@ -48,7 +48,7 @@ let create_server (conf : config) (port : int) : Unix.File_descr.t =
 
 let is_valid_name (conf : config) (name : string) : bool =
   not @@ String.is_empty name &&
-  String.length name <= conf.max_name_bytes &&
+  String.length name <= conf.max_name_length &&
   String.for_all name ~f:Char.is_alpha
 ;;
 

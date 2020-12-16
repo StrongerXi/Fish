@@ -1,18 +1,13 @@
-(** Configurations for a sign-up phase including:
-    - min/max # of players
-    - max # of waiting period to perform
-    - duration of each waiting period
-    - time out for initial name message from connected client
-    - max # of bytes in the name
-    - max # of pending connection requests *)
+(** Configurations for a sign-up phase *)
 type config =
   { min_num_of_players     : int
   ; max_num_of_players     : int
-  ; num_of_waiting_periods : int
-  ; waiting_period_ms      : int
-  ; name_reply_timeout_ms  : int
-  ; max_name_bytes         : int
-  ; max_pending_reqs       : int
+  ; num_of_waiting_periods : int (* max # of waiting period to perform *)
+  ; waiting_period_ms      : int (* max duration of individual waiting period *)
+  ; name_reply_timeout_ms  : int (* how long to wait before player sends in its
+                                    name after initial connection *)
+  ; max_name_length        : int
+  ; max_pending_reqs       : int (* max # of pending connection requests *)
   }
 
 (** Starts a TCP server at given port on the executing machine. New connections
