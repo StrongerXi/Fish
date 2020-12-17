@@ -55,8 +55,6 @@ type t =
   ; mutable observers : Game_observer.t list
   ; conf : timeout_config
   ; state_lock : Mutex.t
-  (* Note that synchronization is not added yet since there doesn't seem to be
-   * any data race condition *)
   }
 
 (* Some constants *)
